@@ -1,0 +1,98 @@
+# Xcode
+# ==============================================================================
+# Xcode build products
+build/
+*.xcarchive/
+*.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/*.xcuserstate
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Swift Package Manager (SPM)
+.swiftpm/
+Package.resolved
+
+# Cocoapods
+Pods/
+*.xcworkspace
+!Pods/Manifest.lock # Keep this if you want to track Podfile.lock and Pods/Manifest.lock
+
+# Carthage
+Carthage/Build/
+Carthage/Checkouts/
+
+# Derived Data
+# ==============================================================================
+DerivedData/
+
+# Simulator and Device Logs
+# ==============================================================================
+# These can contain sensitive information or be very large
+~/Library/Developer/CoreSimulator/Devices/*/data/Containers/Data/Application/*/tmp/*
+~/Library/Developer/CoreSimulator/Devices/*/data/Containers/Data/Application/*/Documents/*
+~/Library/Logs/CoreSimulator/
+
+# Local configuration files (Security Risk)
+# ==============================================================================
+# Files that might contain API keys, sensitive credentials, or other local settings.
+# ALWAYS ensure these are NOT committed to version control.
+*.pif
+*.keychain
+*.mobileprovision
+*.pem
+.env
+.DS_Store # macOS specific hidden file, generally safe to ignore
+
+# User-specific files
+# ==============================================================================
+# These files often contain user-specific settings or caches that should not be shared
+# across different development environments.
+# They might also contain information that, while not directly sensitive,
+# could reveal details about your local setup.
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+
+# Miscellaneous
+# ==============================================================================
+# General files that are not part of the project source code
+.vscode/ # If you use VS Code for any reason
+.idea/ # If you use AppCode or other JetBrains IDEs
+*.lock # General lock files
+*.backup # Backup files
+*.log # Log files (can be large or contain sensitive info)
+
+# fastlane
+#
+# It is recommended to not store the screenshots in the git repo.
+# Instead, use fastlane to re-generate the screenshots whenever they are needed.
+# For more information about the recommended setup visit:
+# https://docs.fastlane.tools/best-practices/source-control/#source-control
+
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+#
+# After new code Injection tools there's a generated folder /iOSInjectionProject
+# https://github.com/johnno1962/injectionforxcode
+
+iOSInjectionProject/
+
+# Mac OS
+.DS_Store
+
+# 專案特定忽略項目
+# API Keys 和敏感資料
+*.plist.secret
+APIKeys.swift
+
+# 使用者生成的內容
+UserData/
+
+# 暫存檔案
+*.tmp
+*.temp
