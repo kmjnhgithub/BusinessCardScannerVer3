@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		821572092E092B21006FA3C2 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 821572082E092B21006FA3C2 /* SnapKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		82CFCE022E09031000EAF70D /* BusinessCardScannerVer3.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BusinessCardScannerVer3.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				821572092E092B21006FA3C2 /* SnapKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = BusinessCardScannerVer3;
 			packageProductDependencies = (
+				821572082E092B21006FA3C2 /* SnapKit */,
 			);
 			productName = BusinessCardScannerVer3;
 			productReference = 82CFCE022E09031000EAF70D /* BusinessCardScannerVer3.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = 82CFCDF92E09031000EAF70D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				821572072E092B21006FA3C2 /* XCRemoteSwiftPackageReference "SnapKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 82CFCE032E09031000EAF70D /* Products */;
 			projectDirPath = "";
@@ -335,6 +344,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		821572072E092B21006FA3C2 /* XCRemoteSwiftPackageReference "SnapKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SnapKit/SnapKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.7.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		821572082E092B21006FA3C2 /* SnapKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 821572072E092B21006FA3C2 /* XCRemoteSwiftPackageReference "SnapKit" */;
+			productName = SnapKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 82CFCDFA2E09031000EAF70D /* Project object */;
 }
