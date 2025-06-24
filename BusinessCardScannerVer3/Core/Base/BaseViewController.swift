@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import SnapKit
 
 class BaseViewController: UIViewController {
     
@@ -21,24 +20,6 @@ class BaseViewController: UIViewController {
     var shouldHideBackButtonTitle: Bool {
         return true
     }
-    
-    /// Loading 視圖
-    private lazy var loadingView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        view.isHidden = true
-        
-        let activityIndicator = UIActivityIndicatorView(style: .large)
-        activityIndicator.color = .white
-        activityIndicator.startAnimating()
-        
-        view.addSubview(activityIndicator)
-        activityIndicator.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-        }
-        
-        return view
-    }()
     
     // MARK: - Lifecycle
     
@@ -67,12 +48,6 @@ class BaseViewController: UIViewController {
     /// 子類別應該覆寫此方法來設定自己的 UI
     func setupUI() {
         view.backgroundColor = .systemBackground
-        
-        // 添加 loading view
-        view.addSubview(loadingView)
-        loadingView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-        }
     }
     
     /// 設定 Auto Layout 約束
@@ -87,38 +62,28 @@ class BaseViewController: UIViewController {
         // 子類別實作
     }
     
-    // MARK: - Loading Management
-    
-    /// 顯示 Loading
-    func showLoading() {
-        DispatchQueue.main.async { [weak self] in
-            self?.loadingView.isHidden = false
-            self?.view.bringSubviewToFront(self?.loadingView ?? UIView())
-        }
-    }
-    
-    /// 隱藏 Loading
-    func hideLoading() {
-        DispatchQueue.main.async { [weak self] in
-            self?.loadingView.isHidden = true
-        }
-    }
-    
     // MARK: - Error Handling
     
-    /// 顯示錯誤訊息
+    /// 顯示錯誤訊息（使用 AlertPresenter）
     /// - Parameters:
     ///   - title: 錯誤標題
     ///   - message: 錯誤訊息
     ///   - completion: 完成回調
     func showError(title: String = "錯誤", message: String, completion: (() -> Void)? = nil) {
-        DispatchQueue.main.async { [weak self] in
-            let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "確定", style: .default) { _ in
-                completion?()
-            })
-            self?.present(alert, animated: true)
-        }
+        AlertPresenter.shared.showError(
+            title: title,
+            message: message,
+            from: self,
+            completion: completion
+        )
+    }
+    
+    /// 顯示錯誤物件
+    /// - Parameters:
+    ///   - error: 錯誤物件
+    ///   - completion: 完成回調
+    func showError(_ error: Error, completion: (() -> Void)? = nil) {
+        AlertPresenter.shared.showError(error, from: self, completion: completion)
     }
     
     // MARK: - Keyboard Handling

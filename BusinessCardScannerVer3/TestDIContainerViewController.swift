@@ -63,58 +63,53 @@ class TestDIContainerViewController: BaseViewController {
     private func testDIContainer() {
         var results: [String] = []
         
-        do {
-            // 1. 測試服務容器基本功能
-            let container = ServiceContainer.shared
-            results.append("✅ ServiceContainer 實例化成功")
-            
-            // 2. 測試服務註冊和解析
-            // 註冊一個測試服務
-            protocol TestService {
-                func getMessage() -> String
-            }
-            
-            class TestServiceImpl: TestService {
-                func getMessage() -> String {
-                    return "Hello from TestService"
-                }
-            }
-            
-            container.register(TestService.self) { _ in
-                TestServiceImpl()
-            }
-            results.append("✅ 服務註冊成功")
-            
-            // 3. 解析服務
-            let service = container.resolve(TestService.self)
-            let message = service.getMessage()
-            results.append("✅ 服務解析成功: \(message)")
-            
-            // 4. 測試單例模式
-            let service1 = container.resolve(TestService.self)
-            let service2 = container.resolve(TestService.self)
-            if (service1 as AnyObject) === (service2 as AnyObject) {
-                results.append("✅ 單例模式正常運作")
-            }
-            
-            // 5. 測試模組工廠
-            let moduleFactory = ModuleFactory(container: container)
-            results.append("✅ ModuleFactory 創建成功")
-            
-            // 6. 測試瞬時服務
-            container.register(TestService.self, name: "transient", lifetime: .transient) { _ in
-                TestServiceImpl()
-            }
-            let t1 = container.resolve(TestService.self, name: "transient")
-            let t2 = container.resolve(TestService.self, name: "transient")
-            if (t1 as AnyObject) !== (t2 as AnyObject) {
-                results.append("✅ 瞬時模式正常運作")
-            }
-            
-            statusLabel.text = results.joined(separator: "\n")
-            
-        } catch {
-            statusLabel.text = "❌ 測試失敗: \(error.localizedDescription)"
+        // 1. 測試服務容器基本功能
+        let container = ServiceContainer.shared
+        results.append("✅ ServiceContainer 實例化成功")
+        
+        // 2. 測試服務註冊和解析
+        // 註冊一個測試服務
+        protocol TestService {
+            func getMessage() -> String
         }
+        
+        class TestServiceImpl: TestService {
+            func getMessage() -> String {
+                return "Hello from TestService"
+            }
+        }
+        
+        container.register(TestService.self) { _ in
+            TestServiceImpl()
+        }
+        results.append("✅ 服務註冊成功")
+        
+        // 3. 解析服務
+        let service = container.resolve(TestService.self)
+        let message = service.getMessage()
+        results.append("✅ 服務解析成功: \(message)")
+        
+        // 4. 測試單例模式
+        let service1 = container.resolve(TestService.self)
+        let service2 = container.resolve(TestService.self)
+        if (service1 as AnyObject) === (service2 as AnyObject) {
+            results.append("✅ 單例模式正常運作")
+        }
+        
+        // 5. 測試模組工廠
+        _ = ModuleFactory(container: container)
+        results.append("✅ ModuleFactory 創建成功")
+        
+        // 6. 測試瞬時服務
+        container.register(TestService.self, name: "transient", lifetime: .transient) { _ in
+            TestServiceImpl()
+        }
+        let t1 = container.resolve(TestService.self, name: "transient")
+        let t2 = container.resolve(TestService.self, name: "transient")
+        if (t1 as AnyObject) !== (t2 as AnyObject) {
+            results.append("✅ 瞬時模式正常運作")
+        }
+        
+        statusLabel.text = results.joined(separator: "\n")
     }
 }

@@ -18,6 +18,7 @@
 		82CFCE142E09031200EAF70D /* Exceptions for "BusinessCardScannerVer3" folder in "BusinessCardScannerVer3" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Core/Models/CoreData/BusinessCardScanner.xcdatamodeld,
 				Info.plist,
 			);
 			target = 82CFCE012E09031000EAF70D /* BusinessCardScannerVer3 */;

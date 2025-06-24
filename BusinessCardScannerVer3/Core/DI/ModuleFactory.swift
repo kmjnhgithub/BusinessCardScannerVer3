@@ -42,12 +42,12 @@ final class ModuleFactory {
     /// - Parameters:
     ///   - navigationController: 導航控制器
     ///   - sourceType: 建立來源類型
-    ///   - editingCard: 編輯的名片（如果是編輯模式）
+    ///   - editingCardId: 編輯的名片 ID（如果是編輯模式）
     /// - Returns: 名片建立模組的 Coordinator
     func makeCardCreationCoordinator(
         navigationController: UINavigationController,
         sourceType: CardCreationSourceType,
-        editingCard: BusinessCard? = nil
+        editingCardId: UUID? = nil
     ) -> Coordinator {
         // 將在 Phase 4-5 實作 CardCreationCoordinator
         fatalError("CardCreationCoordinator not implemented yet")
@@ -56,11 +56,11 @@ final class ModuleFactory {
     /// 創建名片詳情模組
     /// - Parameters:
     ///   - navigationController: 導航控制器
-    ///   - card: 要顯示的名片
+    ///   - cardId: 要顯示的名片 ID
     /// - Returns: 名片詳情模組的 Coordinator
     func makeCardDetailCoordinator(
         navigationController: UINavigationController,
-        card: BusinessCard
+        cardId: UUID
     ) -> Coordinator {
         // 將在 Phase 7 實作 CardDetailCoordinator
         fatalError("CardDetailCoordinator not implemented yet")
@@ -91,11 +91,6 @@ enum CardCreationSourceType {
     case camera
     case photoLibrary
     case manual
-}
-
-struct BusinessCard {
-    let id: UUID
-    let name: String
 }
 
 protocol AIProcessingService {

@@ -205,13 +205,14 @@ extension ServiceContainer {
     static func registerAppServices() {
         let container = ServiceContainer.shared
         
-        // 註冊服務時使用 Mock 實作，之後會替換為真實實作
+        // Core Data Services
+        container.register(CoreDataStack.self) { _ in
+            CoreDataStack()
+        }
         
-        // Core Services - 將在 Task 1.4 後實作
-        // container.register(CoreDataStack.self) { _ in CoreDataStack() }
-        // container.register(BusinessCardRepository.self) { container in
-        //     BusinessCardRepositoryImpl(coreDataStack: container.resolve(CoreDataStack.self))
-        // }
+        container.register(BusinessCardRepository.self) { container in
+            BusinessCardRepositoryImpl(coreDataStack: container.resolve(CoreDataStack.self))
+        }
         
         // Technical Services - 將在各個 Phase 實作
         // container.register(PhotoService.self) { _ in PhotoServiceImpl() }

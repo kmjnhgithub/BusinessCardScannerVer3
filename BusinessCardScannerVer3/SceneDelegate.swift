@@ -15,7 +15,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window = UIWindow(windowScene: windowScene)
         
         // 測試 DI 容器
-        let testViewController = TestDIContainerViewController()
+        let testViewController = TestUIComponentsViewController()
         let navigationController = UINavigationController(rootViewController: testViewController)
         
         window?.rootViewController = navigationController

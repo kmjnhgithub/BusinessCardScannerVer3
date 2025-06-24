@@ -2,11 +2,10 @@
 //  TestViewController.swift
 //  BusinessCardScanner
 //
-//  測試基礎類別的範例 ViewController
+//  測試基礎類別的範例 ViewController (不使用 SnapKit)
 //
 
 import UIKit
-import SnapKit
 
 // 測試用 ViewModel
 class TestViewModel: BaseViewModel {
@@ -38,6 +37,7 @@ class TestViewController: BaseViewController {
         label.textAlignment = .center
         label.numberOfLines = 0
         label.font = .systemFont(ofSize: 18)
+        label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
@@ -46,6 +46,7 @@ class TestViewController: BaseViewController {
         button.setTitle("更新訊息", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         button.addTarget(self, action: #selector(updateButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
     
@@ -63,17 +64,20 @@ class TestViewController: BaseViewController {
     override func setupConstraints() {
         super.setupConstraints()
         
-        messageLabel.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-            make.leading.trailing.equalToSuperview().inset(20)
-        }
-        
-        updateButton.snp.makeConstraints { make in
-            make.top.equalTo(messageLabel.snp.bottom).offset(30)
-            make.centerX.equalToSuperview()
-            make.width.equalTo(120)
-            make.height.equalTo(44)
-        }
+        // 使用原生 Auto Layout
+        NSLayoutConstraint.activate([
+            // messageLabel
+            messageLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            messageLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            messageLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            messageLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            
+            // updateButton
+            updateButton.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 30),
+            updateButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            updateButton.widthAnchor.constraint(equalToConstant: 120),
+            updateButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
     }
     
     override func setupBindings() {
@@ -89,10 +93,11 @@ class TestViewController: BaseViewController {
         // 綁定 Loading 狀態
         viewModel.isLoading
             .bind { [weak self] isLoading in
+                guard let self = self else { return }
                 if isLoading {
-                    self?.showLoading()
+                    self.showLoading()
                 } else {
-                    self?.hideLoading()
+                    self.hideLoading()
                 }
             }
             .disposed(by: disposeBag)
