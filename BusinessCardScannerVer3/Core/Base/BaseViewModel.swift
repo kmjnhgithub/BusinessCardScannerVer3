@@ -1,27 +1,31 @@
 //
 //  BaseViewModel.swift
-//  BusinessCardScanner
+//  BusinessCardScannerVer2
 //
-//  基礎 ViewModel，提供所有 ViewModel 共用功能
+//  Base class for all ViewModels with Combine support
 //
 
 import Foundation
+import Combine
 
-class BaseViewModel {
+/// 所有 ViewModel 的基礎類別
+class BaseViewModel: ObservableObject {
     
     // MARK: - Properties
     
-    /// Loading 狀態
-    let isLoading = Observable<Bool>(false)
+    /// Combine 訂閱集合
+    var cancellables = Set<AnyCancellable>()
     
-    /// 錯誤訊息
-    let errorMessage = Observable<String?>(nil)
+    /// 載入狀態
+    @Published var isLoading = false
     
-    /// 成功訊息
-    let successMessage = Observable<String?>(nil)
+    /// 錯誤狀態
+    @Published var error: Error?
     
-    /// Disposable 容器，用於管理訂閱
-    private var disposables: [Disposable] = []
+    /// 是否有錯誤
+    var hasError: Bool {
+        error != nil
+    }
     
     // MARK: - Initialization
     
@@ -29,110 +33,172 @@ class BaseViewModel {
         setupBindings()
     }
     
-    // MARK: - Setup
+    deinit {
+        #if DEBUG
+        print("✅ \(String(describing: type(of: self))) deinit")
+        #endif
+    }
     
-    /// 設定內部綁定
-    /// 子類別可覆寫此方法來設定自己的綁定
+    // MARK: - Setup (子類別覆寫)
+    
+    /// 設定資料綁定
     func setupBindings() {
-        // 子類別實作
+        // 子類別覆寫此方法來設定 Combine 綁定
     }
     
-    // MARK: - Loading Management
+    // MARK: - Loading State Management
     
-    /// 開始 Loading
+    /// 開始載入
     func startLoading() {
-        isLoading.value = true
+        isLoading = true
+        error = nil
     }
     
-    /// 結束 Loading
+    /// 結束載入
     func stopLoading() {
-        isLoading.value = false
+        isLoading = false
     }
-    
-    // MARK: - Error Handling
     
     /// 處理錯誤
-    /// - Parameter error: 錯誤物件
     func handleError(_ error: Error) {
+        self.error = error
         stopLoading()
+    }
+    
+    /// 清除錯誤
+    func clearError() {
+        error = nil
+    }
+    
+    // MARK: - Async Operation Helpers
+    
+    /// 執行非同步操作並處理載入狀態
+    func performAsyncOperation<T>(
+        operation: @escaping () async throws -> T,
+        onSuccess: @escaping (T) -> Void,
+        onError: ((Error) -> Void)? = nil
+    ) {
+        startLoading()
         
-        // 根據錯誤類型提供適當的錯誤訊息
-        if let localizedError = error as? LocalizedError {
-            errorMessage.value = localizedError.errorDescription ?? error.localizedDescription
-        } else {
-            errorMessage.value = error.localizedDescription
+        Task { @MainActor in
+            do {
+                let result = try await operation()
+                stopLoading()
+                onSuccess(result)
+            } catch {
+                handleError(error)
+                onError?(error)
+            }
         }
     }
     
-    /// 顯示錯誤訊息
-    /// - Parameter message: 錯誤訊息
-    func showError(_ message: String) {
-        stopLoading()
-        errorMessage.value = message
+    /// 執行 Combine Publisher 並處理載入狀態
+    func performPublisherOperation<T>(
+        publisher: AnyPublisher<T, Error>,
+        onSuccess: @escaping (T) -> Void,
+        onError: ((Error) -> Void)? = nil
+    ) {
+        startLoading()
+        
+        publisher
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    self?.stopLoading()
+                    if case .failure(let error) = completion {
+                        self?.handleError(error)
+                        onError?(error)
+                    }
+                },
+                receiveValue: { value in
+                    onSuccess(value)
+                }
+            )
+            .store(in: &cancellables)
+    }
+}
+
+// MARK: - Common Publishers
+
+extension BaseViewModel {
+    
+    /// 載入狀態變更 Publisher
+    var isLoadingPublisher: AnyPublisher<Bool, Never> {
+        $isLoading
+            .removeDuplicates()
+            .eraseToAnyPublisher()
     }
     
-    /// 顯示成功訊息
-    /// - Parameter message: 成功訊息
-    func showSuccess(_ message: String) {
-        stopLoading()
-        successMessage.value = message
+    /// 錯誤狀態變更 Publisher
+    var errorPublisher: AnyPublisher<Error?, Never> {
+        $error
+            .eraseToAnyPublisher()
     }
     
-    /// 清除所有訊息
-    func clearMessages() {
-        errorMessage.value = nil
-        successMessage.value = nil
+    /// 有錯誤時發送 true 的 Publisher
+    var hasErrorPublisher: AnyPublisher<Bool, Never> {
+        $error
+            .map { $0 != nil }
+            .removeDuplicates()
+            .eraseToAnyPublisher()
     }
+}
+
+// MARK: - Validation Helpers
+
+extension BaseViewModel {
     
-    // MARK: - Disposable Management
-    
-    /// 添加 Disposable
-    /// - Parameter disposable: 要管理的 Disposable
-    func addDisposable(_ disposable: Disposable) {
-        disposables.append(disposable)
+    /// 驗證結果
+    struct ValidationResult {
+        let isValid: Bool
+        let errorMessage: String?
+        
+        static var valid: ValidationResult {
+            ValidationResult(isValid: true, errorMessage: nil)
+        }
+        
+        static func invalid(_ message: String) -> ValidationResult {
+            ValidationResult(isValid: false, errorMessage: message)
+        }
     }
-    
-    /// 清理所有 Disposables
-    private func disposeAll() {
-        disposables.forEach { $0.dispose() }
-        disposables.removeAll()
-    }
-    
-    // MARK: - Validation
     
     /// 驗證 Email 格式
-    /// - Parameter email: 要驗證的 email
-    /// - Returns: 是否為有效格式
-    func isValidEmail(_ email: String) -> Bool {
-        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
-        let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
-        return emailPredicate.evaluate(with: email)
-    }
-    
-    /// 驗證電話號碼格式
-    /// - Parameter phone: 要驗證的電話號碼
-    /// - Returns: 是否為有效格式
-    func isValidPhone(_ phone: String) -> Bool {
-        // 移除所有非數字字元
-        let digitsOnly = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+    func validateEmail(_ email: String?) -> ValidationResult {
+        guard let email = email, !email.isEmpty else {
+            return .invalid("請輸入電子郵件")
+        }
         
-        // 台灣手機號碼：09 開頭，共 10 碼
-        // 台灣市話：區碼 + 號碼，總長度 9-10 碼
-        return digitsOnly.count >= 9 && digitsOnly.count <= 10
+        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
+        
+        if emailPredicate.evaluate(with: email) {
+            return .valid
+        } else {
+            return .invalid("請輸入有效的電子郵件格式")
+        }
     }
     
-    /// 驗證網址格式
-    /// - Parameter urlString: 要驗證的網址
-    /// - Returns: 是否為有效格式
-    func isValidURL(_ urlString: String) -> Bool {
-        guard let url = URL(string: urlString) else { return false }
-        return url.scheme != nil && url.host != nil
+    /// 驗證電話號碼
+    func validatePhone(_ phone: String?) -> ValidationResult {
+        guard let phone = phone, !phone.isEmpty else {
+            return .invalid("請輸入電話號碼")
+        }
+        
+        // 移除空格和符號
+        let cleanPhone = phone.replacingOccurrences(of: "[^0-9+]", with: "", options: .regularExpression)
+        
+        if cleanPhone.count >= 8 && cleanPhone.count <= 15 {
+            return .valid
+        } else {
+            return .invalid("請輸入有效的電話號碼")
+        }
     }
     
-    // MARK: - Deinit
-    
-    deinit {
-        disposeAll()
-        print("\(String(describing: self)) deinit")
+    /// 驗證必填欄位
+    func validateRequired(_ value: String?, fieldName: String) -> ValidationResult {
+        guard let value = value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .invalid("\(fieldName)為必填欄位")
+        }
+        return .valid
     }
 }

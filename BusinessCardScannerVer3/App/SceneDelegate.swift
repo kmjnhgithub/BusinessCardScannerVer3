@@ -14,9 +14,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: windowScene)
         
-        // 測試 DI 容器
-        let testViewController = TestUIComponentsViewController()
-        let navigationController = UINavigationController(rootViewController: testViewController)
+        // 建立導航控制器
+        let navigationController = UINavigationController()
+        
+        // 建立測試協調器
+        let testCoordinator = TestCoordinator(navigationController: navigationController)
+        testCoordinator.start()
         
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()

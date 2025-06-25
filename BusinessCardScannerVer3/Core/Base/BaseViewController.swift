@@ -1,30 +1,40 @@
 //
 //  BaseViewController.swift
-//  BusinessCardScanner
+//  BusinessCardScannerVer2
 //
-//  基礎 ViewController，提供所有 ViewController 共用功能
+//  Base class for all ViewControllers in the app
 //
 
 import UIKit
+import Combine
+import SnapKit
 
+/// 所有 ViewController 的基礎類別
 class BaseViewController: UIViewController {
     
     // MARK: - Properties
     
-    /// 是否顯示導航列
-    var shouldShowNavigationBar: Bool {
-        return true
-    }
+    /// Combine 訂閱集合，會在 deinit 時自動取消
+    var cancellables = Set<AnyCancellable>()
     
-    /// 是否隱藏返回按鈕文字
-    var shouldHideBackButtonTitle: Bool {
-        return true
-    }
+    /// 是否在 viewDidLoad 時自動隱藏導航列
+    var shouldHideNavigationBar: Bool { false }
+    
+    /// 是否支援大標題
+    var prefersLargeTitles: Bool { false }
     
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // 設定基本樣式
+        view.backgroundColor = .systemBackground
+        
+        // 設定導航列
+        configureNavigationBar()
+        
+        // 子類別實作點
         setupUI()
         setupConstraints()
         setupBindings()
@@ -33,100 +43,148 @@ class BaseViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // 設定導航列顯示狀態
-        navigationController?.setNavigationBarHidden(!shouldShowNavigationBar, animated: animated)
-        
-        // 設定返回按鈕樣式
-        if shouldHideBackButtonTitle {
-            navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+        if shouldHideNavigationBar {
+            navigationController?.setNavigationBarHidden(true, animated: animated)
         }
     }
     
-    // MARK: - Setup Methods
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if shouldHideNavigationBar {
+            navigationController?.setNavigationBarHidden(false, animated: animated)
+        }
+    }
+    
+    deinit {
+        // cancellables 會自動清理，但明確記錄 deinit 有助於除錯
+        #if DEBUG
+        print("✅ \(String(describing: type(of: self))) deinit")
+        #endif
+    }
+    
+    // MARK: - Setup Methods (子類別覆寫)
     
     /// 設定 UI 元件
-    /// 子類別應該覆寫此方法來設定自己的 UI
     func setupUI() {
-        view.backgroundColor = .systemBackground
+        // 子類別覆寫此方法來建立和設定 UI 元件
     }
     
     /// 設定 Auto Layout 約束
-    /// 子類別應該覆寫此方法來設定自己的約束
     func setupConstraints() {
-        // 子類別實作
+        // 子類別覆寫此方法來設定 SnapKit 約束
     }
     
-    /// 設定資料綁定
-    /// 子類別應該覆寫此方法來設定 ViewModel 綁定
+    /// 設定 Combine 綁定
     func setupBindings() {
-        // 子類別實作
+        // 子類別覆寫此方法來設定資料綁定
     }
     
-    // MARK: - Error Handling
+    // MARK: - Configuration
     
-    /// 顯示錯誤訊息（使用 AlertPresenter）
-    /// - Parameters:
-    ///   - title: 錯誤標題
-    ///   - message: 錯誤訊息
-    ///   - completion: 完成回調
-    func showError(title: String = "錯誤", message: String, completion: (() -> Void)? = nil) {
-        AlertPresenter.shared.showError(
+    private func configureNavigationBar() {
+        navigationController?.navigationBar.prefersLargeTitles = prefersLargeTitles
+        navigationItem.largeTitleDisplayMode = prefersLargeTitles ? .always : .never
+    }
+    
+    // MARK: - Common UI Helpers
+    
+    /// 顯示載入指示器
+    func showLoading(_ message: String? = nil) {
+        // 這裡會在實作 LoadingPresenter 後更新
+        // 暫時使用簡單的實作
+        view.isUserInteractionEnabled = false
+    }
+    
+    /// 隱藏載入指示器
+    func hideLoading() {
+        // 這裡會在實作 LoadingPresenter 後更新
+        view.isUserInteractionEnabled = true
+    }
+    
+    /// 顯示錯誤訊息
+    func showError(_ error: Error) {
+        // 這裡會在實作 AlertPresenter 後更新
+        // 暫時使用系統 alert
+        let alert = UIAlertController(
+            title: "錯誤",
+            message: error.localizedDescription,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "確定", style: .default))
+        present(alert, animated: true)
+    }
+    
+    /// 顯示提示訊息
+    func showMessage(_ message: String, title: String? = nil) {
+        // 這裡會在實作 AlertPresenter 後更新
+        let alert = UIAlertController(
             title: title,
             message: message,
-            from: self,
-            completion: completion
+            preferredStyle: .alert
         )
-    }
-    
-    /// 顯示錯誤物件
-    /// - Parameters:
-    ///   - error: 錯誤物件
-    ///   - completion: 完成回調
-    func showError(_ error: Error, completion: (() -> Void)? = nil) {
-        AlertPresenter.shared.showError(error, from: self, completion: completion)
+        alert.addAction(UIAlertAction(title: "確定", style: .default))
+        present(alert, animated: true)
     }
     
     // MARK: - Keyboard Handling
     
-    /// 註冊鍵盤通知
-    func registerKeyboardNotifications() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow(_:)),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
+    /// 註冊鍵盤事件監聽
+    func registerKeyboardObservers() {
+        NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
+            .compactMap { notification in
+                notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+            }
+            .sink { [weak self] keyboardFrame in
+                self?.keyboardWillShow(height: keyboardFrame.height)
+            }
+            .store(in: &cancellables)
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide(_:)),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
+        NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
+            .sink { [weak self] _ in
+                self?.keyboardWillHide()
+            }
+            .store(in: &cancellables)
     }
     
-    /// 取消註冊鍵盤通知
-    func unregisterKeyboardNotifications() {
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
+    /// 鍵盤將顯示（子類別可覆寫）
+    func keyboardWillShow(height: CGFloat) {
+        // 子類別覆寫以處理鍵盤顯示
     }
     
-    /// 鍵盤將顯示
-    /// 子類別可覆寫此方法來處理鍵盤顯示
-    @objc func keyboardWillShow(_ notification: Notification) {
-        // 子類別實作
+    /// 鍵盤將隱藏（子類別可覆寫）
+    func keyboardWillHide() {
+        // 子類別覆寫以處理鍵盤隱藏
     }
     
-    /// 鍵盤將隱藏
-    /// 子類別可覆寫此方法來處理鍵盤隱藏
-    @objc func keyboardWillHide(_ notification: Notification) {
-        // 子類別實作
+    /// 點擊背景收起鍵盤
+    func setupDismissKeyboardGesture() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
     }
     
-    // MARK: - Deinit
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+}
+
+// MARK: - Navigation Helpers
+
+extension BaseViewController {
     
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-        print("\(String(describing: self)) deinit")
+    /// 返回上一頁
+    func popViewController(animated: Bool = true) {
+        navigationController?.popViewController(animated: animated)
+    }
+    
+    /// 返回根視圖
+    func popToRootViewController(animated: Bool = true) {
+        navigationController?.popToRootViewController(animated: animated)
+    }
+    
+    /// 關閉 Modal
+    func dismissViewController(animated: Bool = true, completion: (() -> Void)? = nil) {
+        dismiss(animated: animated, completion: completion)
     }
 }
