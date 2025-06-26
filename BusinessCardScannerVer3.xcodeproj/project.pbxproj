@@ -25,11 +25,22 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		821574792E0D29DA006FA3C2 /* Exceptions for "BusinessCardScannerVer3" folder in "Copy Bundle Resources" phase from "BusinessCardScannerVer3" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 82CFCE002E09031000EAF70D /* Resources */;
+			membershipExceptions = (
+				Core/Models/CoreData/BusinessCardScanner.xcdatamodeld,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		82CFCE042E09031000EAF70D /* BusinessCardScannerVer3 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				82CFCE142E09031200EAF70D /* Exceptions for "BusinessCardScannerVer3" folder in "BusinessCardScannerVer3" target */,
+				821574792E0D29DA006FA3C2 /* Exceptions for "BusinessCardScannerVer3" folder in "Copy Bundle Resources" phase from "BusinessCardScannerVer3" target */,
 			);
 			path = BusinessCardScannerVer3;
 			sourceTree = "<group>";

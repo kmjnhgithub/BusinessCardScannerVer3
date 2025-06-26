@@ -1,6 +1,6 @@
 //
 //  BusinessCardService.swift
-//  BusinessCardScannerVer3
+
 //
 //  Created by mike liu on 2025/6/25.
 //

@@ -18,12 +18,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: windowScene)
         
-//        // 方式 1：直接執行測試（推薦先用這個）
-        Task13VerificationTest.runAllTests()
+////        // 方式 1：直接執行測試（推薦先用這個）
+        Task14VerificationTest.runAllTests()
         
         // 方式 2：顯示測試 UI
-        let testTask13ViewController = Task13VerificationTest.makeTestViewController()
-        let navigationController = UINavigationController(rootViewController: testTask13ViewController)
+        let testTask14ViewController = Task14VerificationTest.makeTestViewController()
+        let navigationController = UINavigationController(rootViewController: testTask14ViewController)
         
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
