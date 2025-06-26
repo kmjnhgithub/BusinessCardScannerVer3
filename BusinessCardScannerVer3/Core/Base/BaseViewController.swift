@@ -1,6 +1,6 @@
 //
 //  BaseViewController.swift
-//  BusinessCardScannerVer2
+//  
 //
 //  Base class for all ViewControllers in the app
 //

@@ -1,6 +1,6 @@
 //
 //  BaseCoordinator.swift
-//  BusinessCardScannerVer2
+//  
 //
 //  Base class for all Coordinators
 //

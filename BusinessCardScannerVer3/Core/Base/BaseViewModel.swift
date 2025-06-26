@@ -1,6 +1,6 @@
 //
 //  BaseViewModel.swift
-//  BusinessCardScannerVer2
+//  
 //
 //  Base class for all ViewModels with Combine support
 //
