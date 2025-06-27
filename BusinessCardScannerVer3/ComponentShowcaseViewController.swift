@@ -298,17 +298,17 @@ class ComponentShowcaseViewController: BaseViewController {
         label1.text = "標準分隔線"
         label1.font = AppTheme.Fonts.body
         contentStack.addArrangedSubview(label1)
-        
-        let separator1 = SeparatorView.fullWidth()
-        contentStack.addArrangedSubview(separator1)
-        
+
+        // 直接使用，它會自動填滿
+        contentStack.addArrangedSubview(SeparatorView.fullWidth())
+
         let label2 = UILabel()
         label2.text = "列表樣式分隔線（左側縮排）"
         label2.font = AppTheme.Fonts.body
         contentStack.addArrangedSubview(label2)
-        
-        let separator2 = SeparatorView.listSeparator()
-        contentStack.addArrangedSubview(separator2)
+
+        // 直接使用，它會自動處理縮排
+        contentStack.addArrangedSubview(SeparatorView.listSeparator())
         
         let label3 = UILabel()
         label3.text = "自定義顏色和厚度"
