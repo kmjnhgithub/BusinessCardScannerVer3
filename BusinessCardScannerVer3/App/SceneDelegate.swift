@@ -18,15 +18,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: windowScene)
         
-////        // 方式 1：直接執行測試（推薦先用這個）
-        Task14VerificationTest.runAllTests()
-        
-        // 方式 2：顯示測試 UI
-        let testTask14ViewController = Task14VerificationTest.makeTestViewController()
-        let navigationController = UINavigationController(rootViewController: testTask14ViewController)
-        
-        window?.rootViewController = navigationController
-        window?.makeKeyAndVisible()
+        // 執行 Task 1.6 測試
+        Task16VerificationTest.setupTestScene(in: window)
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {}
