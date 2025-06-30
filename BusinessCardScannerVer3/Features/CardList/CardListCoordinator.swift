@@ -52,6 +52,7 @@ final class CardListCoordinator: BaseCoordinator {
         
         // 建立 ViewController
         let viewController = CardListViewController(viewModel: viewModel)
+        viewController.coordinatorDelegate = self // 設定 delegate
         self.viewController = viewController
         
         // 設定 ViewController 為根視圖控制器
@@ -97,5 +98,28 @@ extension ModuleFactory {
     /// 建立 CardList 模組協調器
     func makeCardListCoordinator(navigationController: UINavigationController) -> CardListCoordinator {
         return CardListCoordinator(navigationController: navigationController, moduleFactory: self)
+    }
+}
+
+// MARK: - CardListCoordinatorDelegate
+
+extension CardListCoordinator: CardListCoordinatorDelegate {
+    
+    func cardListDidSelectCard(_ card: BusinessCard) {
+        showCardDetail(card)
+    }
+    
+    func cardListDidRequestNewCard() {
+        showAddCardOptions()
+    }
+    
+    func cardListDidRequestEdit(_ card: BusinessCard) {
+        // TODO: Task 3.4 實作編輯功能
+        print("✏️ 編輯名片: \(card.name)")
+        // 暫時顯示提示
+        AlertPresenter.shared.showMessage(
+            "編輯功能將在 Task 3.4 中實作",
+            title: "開發中"
+        )
     }
 }

@@ -9,6 +9,20 @@ import UIKit
 import SnapKit
 import Combine
 
+// MARK: - CardListCoordinatorDelegate
+
+/// CardList 模組與 Coordinator 的通訊協議
+protocol CardListCoordinatorDelegate: AnyObject {
+    /// 選中名片時呼叫
+    func cardListDidSelectCard(_ card: BusinessCard)
+    
+    /// 請求新增名片時呼叫
+    func cardListDidRequestNewCard()
+    
+    /// 請求編輯名片時呼叫
+    func cardListDidRequestEdit(_ card: BusinessCard)
+}
+
 class CardListViewController: BaseViewController {
     
     // MARK: - UI Elements
@@ -21,6 +35,9 @@ class CardListViewController: BaseViewController {
     // MARK: - Properties
     
     private var viewModel: CardListViewModel!
+    
+    /// Coordinator 委託 - 用於處理導航
+    weak var coordinatorDelegate: CardListCoordinatorDelegate?
     
     // MARK: - Initialization
     
@@ -216,12 +233,12 @@ class CardListViewController: BaseViewController {
     // MARK: - Actions
     
     @objc private func addButtonTapped() {
-        // TODO: 觸發新增名片流程 (Task 3.4 實作)
-        print("新增按鈕被點擊")
+        // 透過 Coordinator 處理新增名片流程
+        coordinatorDelegate?.cardListDidRequestNewCard()
     }
     
     @objc private func refreshControlValueChanged() {
-        viewModel.loadCards()
+        viewModel.reloadData()
     }
     
     @objc private func addButtonTouchDown() {
@@ -271,9 +288,51 @@ extension CardListViewController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         
         let businessCard = viewModel.filteredCards[indexPath.row]
-        // TODO: 導航到詳情頁面 (後續實作)
-        print("選中名片: \(businessCard.name ?? "未知")")
+        
+        // 透過 Coordinator 處理導航
+        coordinatorDelegate?.cardListDidSelectCard(businessCard)
     }
+    
+    // MARK: - 滑動刪除功能
+    
+    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        guard editingStyle == .delete else { return }
+        
+        let businessCard = viewModel.filteredCards[indexPath.row]
+        
+        // 使用AlertPresenter顯示確認對話框
+        AlertPresenter.shared.showDestructiveConfirmation(
+            "確定要刪除「\(businessCard.name)」的名片嗎？",
+            title: "刪除名片",
+            destructiveTitle: "刪除",
+            onConfirm: { [weak self] in
+                self?.performDelete(at: indexPath)
+            }
+        )
+    }
+    
+    /// 執行刪除操作
+    /// - Parameter indexPath: 要刪除的索引路徑
+    private func performDelete(at indexPath: IndexPath) {
+        // 確保索引仍然有效（防止在對話框顯示期間資料變更）
+        guard indexPath.row < viewModel.filteredCards.count else {
+            print("⚠️ 刪除失敗：索引已失效")
+            return
+        }
+        
+        let businessCard = viewModel.filteredCards[indexPath.row]
+        
+        // 從 ViewModel 刪除資料，UI 會自動更新
+        viewModel.deleteCard(at: indexPath.row)
+        
+        // 顯示成功提示
+        ToastPresenter.shared.showSuccess("已刪除「\(businessCard.name)」")
+    }
+    
 }
 
 // MARK: - UISearchResultsUpdating

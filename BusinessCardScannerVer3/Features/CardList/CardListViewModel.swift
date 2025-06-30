@@ -36,18 +36,21 @@ class CardListViewModel: BaseViewModel {
         self.repository = repository
         super.init()
         
-        setupBindings()
         generateMockData() // Task 3.1 測試用假資料
+        setupBindings()
     }
     
     // MARK: - Setup
     
     override func setupBindings() {
         // 監聽卡片資料變化，計算過濾結果
+        // 移除 debounce，因為 ViewController 已經有 300ms debounce
+        // 直接響應可避免測試中的時序問題
         Publishers.CombineLatest($cards, $searchText)
             .map { [weak self] cards, searchText in
                 self?.filterCards(cards, with: searchText) ?? []
             }
+            .receive(on: DispatchQueue.main)
             .assign(to: &$filteredCards)
         
         // 監聽過濾結果變化，更新空狀態
@@ -79,15 +82,43 @@ class CardListViewModel: BaseViewModel {
     /// 刪除名片
     /// - Parameter card: 要刪除的名片
     func deleteCard(_ card: BusinessCard) {
+        // 立即從記憶體陣列中移除，讓 UI 馬上更新
         cards.removeAll { $0.id == card.id }
+        
+        // 立即同步更新 filteredCards，避免 TableView 崩潰
+        filteredCards.removeAll { $0.id == card.id }
+        
+        // TODO: Task 3.3 - 整合真實的資料庫刪除
+        // 模擬後台刪除操作（不影響 UI）
+        DispatchQueue.global(qos: .background).async {
+            // 這裡可以執行實際的資料庫刪除操作
+            print("✅ 已刪除名片: \(card.name)")
+        }
     }
     
-    /// 刪除指定索引的名片
-    /// - Parameter index: 索引
+    /// 刪除指定索引的名片（用於滑動刪除）
+    /// - Parameter index: filteredCards 中的索引
     func deleteCard(at index: Int) {
-        guard index >= 0 && index < filteredCards.count else { return }
+        guard index >= 0 && index < filteredCards.count else { 
+            print("⚠️ 刪除失敗：索引越界 (\(index))")
+            return 
+        }
         let cardToDelete = filteredCards[index]
         deleteCard(cardToDelete)
+    }
+    
+    /// 重新載入資料（用於下拉刷新）
+    func reloadData() {
+        isLoading = true
+        
+        // TODO: Task 3.3 - 整合真實的資料庫重新載入
+        // 目前重新生成測試資料模擬刷新
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.generateMockData()
+            self?.isLoading = false
+            
+            print("✅ 資料重新載入完成")
+        }
     }
     
     // MARK: - Private Methods

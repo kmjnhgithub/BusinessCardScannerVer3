@@ -23,6 +23,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Phase 2 驗證測試
         runPhase2VerificationTest()
         
+        // Task 3.3 驗證測試
+        runTask33VerificationTest()
+        
         // 如果需要測試 ComponentShowcase，可以取消註解以下行
         // setupComponentShowcaseTest()
     }
@@ -63,6 +66,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 延遲執行測試，確保 UI 已完全載入
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             Task21VerificationTest.setupTestScene(in: self.window)
+        }
+    }
+    
+    /// 執行 Task 3.3 驗證測試
+    private func runTask33VerificationTest() {
+        // 延遲執行測試，確保應用完全啟動
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            Task33VerificationTest.runVerification()
         }
     }
     
