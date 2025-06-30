@@ -127,27 +127,12 @@ final class TabBarCoordinator: BaseCoordinator {
         // 創建導航控制器
         let navigationController = UINavigationController()
         
-        // 未來實作：創建 CardList 協調器
-        // let coordinator = moduleFactory.makeCardListCoordinator(navigationController: navigationController)
-        // coordinator.start()
+        // 創建 CardList 協調器並啟動
+        let coordinator = moduleFactory.makeCardListCoordinator(navigationController: navigationController)
+        coordinator.start()
         
-        // 目前使用占位視圖控制器
-        let placeholderVC = PlaceholderViewController(
-            moduleTitle: "名片列表",
-            description: "管理和瀏覽所有已儲存的名片，支援搜尋和快速操作功能。",
-            phase: "Phase 3 (Task 3.1-3.4)",
-            features: [
-                "顯示所有名片列表",
-                "搜尋名片（姓名、公司、電話、Email）",
-                "滑動刪除名片",
-                "下拉更新列表",
-                "點擊查看名片詳情",
-                "新增名片快捷按鈕"
-            ],
-            icon: TabIndex.cardList.icon
-        )
-        
-        navigationController.setViewControllers([placeholderVC], animated: false)
+        // 將協調器添加到子協調器中管理生命週期
+        addChild(coordinator)
         
         // 設定 Tab Bar Item
         setupTabBarItem(for: navigationController, tabIndex: .cardList)
