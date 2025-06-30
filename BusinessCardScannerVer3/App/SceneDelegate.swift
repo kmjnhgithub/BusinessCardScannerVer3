@@ -18,8 +18,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: windowScene)
         
-        // 執行 Task 1.6 測試
-        Task16VerificationTest.setupTestScene(in: window)
+        // 執行 Task 1.7 測試
+        Task17VerificationTest.setupTestScene(in: window)
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {}

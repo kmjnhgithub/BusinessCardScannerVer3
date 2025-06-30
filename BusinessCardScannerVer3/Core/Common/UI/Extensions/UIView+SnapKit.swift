@@ -348,24 +348,81 @@ extension UIStackView {
 }
 
 // MARK: - Safe Area Helpers
+// ⚠️ 修正：避免與系統屬性名稱衝突，使用不同的命名
 
 extension UIView {
     
-    /// 獲取安全區域邊距
-    var safeAreaInsets: UIEdgeInsets {
+    /// 獲取當前視圖的安全區域邊距
+    /// - Note: 使用 `currentSafeAreaInsets` 避免與系統 `safeAreaInsets` 衝突
+    var currentSafeAreaInsets: UIEdgeInsets {
         if #available(iOS 11.0, *) {
-            return self.safeAreaInsets
+            // 直接返回系統的 safeAreaInsets，不再調用自己
+            return safeAreaInsets
         } else {
+            // iOS 11 以下版本返回零邊距
             return .zero
         }
     }
     
-    /// 獲取安全區域佈局指南
-    var safeArea: UILayoutGuide {
+    /// 獲取安全區域佈局指南的便利屬性
+    /// - Note: 提供向後相容的安全區域存取
+    var compatibleSafeAreaLayoutGuide: UILayoutGuide {
         if #available(iOS 11.0, *) {
             return safeAreaLayoutGuide
         } else {
+            // iOS 11 以下使用 layoutMarginsGuide 作為替代
             return layoutMarginsGuide
+        }
+    }
+    
+    /// 計算考慮安全區域的實際可用框架
+    /// - Returns: 扣除安全區域後的可用矩形
+    var safeAreaFrame: CGRect {
+        let insets = currentSafeAreaInsets
+        return CGRect(
+            x: bounds.origin.x + insets.left,
+            y: bounds.origin.y + insets.top,
+            width: bounds.width - insets.left - insets.right,
+            height: bounds.height - insets.top - insets.bottom
+        )
+    }
+    
+    /// 檢查是否有安全區域邊距
+    /// - Returns: 如果任何方向有安全區域邊距則返回 true
+    var hasSafeAreaInsets: Bool {
+        let insets = currentSafeAreaInsets
+        return insets.top > 0 || insets.bottom > 0 ||
+               insets.left > 0 || insets.right > 0
+    }
+}
+
+// MARK: - Additional Safe Area Utilities
+
+extension UIView {
+    
+    /// 添加考慮安全區域的子視圖約束
+    /// - Parameters:
+    ///   - subview: 要添加的子視圖
+    ///   - edges: 要對齊的邊緣
+    ///   - insets: 額外的內邊距
+    func addSafeAreaPinnedSubview(_ subview: UIView,
+                                  edges: UIRectEdge = .all,
+                                  insets: UIEdgeInsets = .zero) {
+        addSubview(subview)
+        
+        subview.snp.makeConstraints { make in
+            if edges.contains(.top) {
+                make.top.equalTo(compatibleSafeAreaLayoutGuide).inset(insets.top)
+            }
+            if edges.contains(.bottom) {
+                make.bottom.equalTo(compatibleSafeAreaLayoutGuide).inset(insets.bottom)
+            }
+            if edges.contains(.left) {
+                make.left.equalTo(compatibleSafeAreaLayoutGuide).inset(insets.left)
+            }
+            if edges.contains(.right) {
+                make.right.equalTo(compatibleSafeAreaLayoutGuide).inset(insets.right)
+            }
         }
     }
 }
