@@ -16,7 +16,19 @@ class ComponentShowcaseViewController: BaseViewController {
     
     // MARK: - Properties
     
-    private let viewModel = ComponentShowcaseViewModel()
+    private let viewModel: ComponentShowcaseViewModel
+    weak var coordinator: ComponentShowcaseCoordinatorProtocol?
+    
+    // MARK: - Initialization
+    
+    init(viewModel: ComponentShowcaseViewModel) {
+        self.viewModel = viewModel
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
     
     // MARK: - UI Components
     
@@ -36,9 +48,31 @@ class ComponentShowcaseViewController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "元件展示"
+        setupNavigationBar()
         
         // 測試 ServiceContainer
         testServiceContainer()
+    }
+    
+    private func setupNavigationBar() {
+        // 添加測試按鈕
+        let testButton = UIBarButtonItem(
+            title: "執行測試",
+            style: .plain,
+            target: self,
+            action: #selector(runCompleteTest)
+        )
+        navigationItem.rightBarButtonItem = testButton
+    }
+    
+    @objc private func runCompleteTest() {
+        ToastPresenter.shared.showInfo("開始執行完整測試...")
+        
+        viewModel.runCompleteTest()
+            .sink { result in
+                ToastPresenter.shared.showSuccess(result)
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Setup
@@ -66,6 +100,7 @@ class ComponentShowcaseViewController: BaseViewController {
         setupCardSection()
         setupEmptyStateSection()
         setupSeparatorSection()
+        setupPresenterSection()
         setupCombineTestSection()
         setupRepositoryTestSection()
     }
@@ -87,11 +122,11 @@ class ComponentShowcaseViewController: BaseViewController {
         // 綁定 ViewModel 狀態
         viewModel.$isLoading
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] isLoading in
+            .sink { isLoading in
                 if isLoading {
-                    self?.showLoading("測試載入中...")
+                    LoadingPresenter.shared.show(message: "測試載入中...")
                 } else {
-                    self?.hideLoading()
+                    LoadingPresenter.shared.hide()
                 }
             }
             .store(in: &cancellables)
@@ -99,8 +134,8 @@ class ComponentShowcaseViewController: BaseViewController {
         viewModel.$testResult
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] result in
-                self?.showMessage(result, title: "測試結果")
+            .sink { result in
+                ToastPresenter.shared.showSuccess(result)
             }
             .store(in: &cancellables)
     }
@@ -226,6 +261,18 @@ class ComponentShowcaseViewController: BaseViewController {
             }
             .store(in: &cancellables)
         
+        emailField.textPublisher
+            .sink { [weak self] text in
+                self?.viewModel.updateFormData(email: text)
+            }
+            .store(in: &cancellables)
+        
+        phoneField.textPublisher
+            .sink { [weak self] text in
+                self?.viewModel.updateFormData(phone: text)
+            }
+            .store(in: &cancellables)
+        
         stackView.addArrangedSubview(formSection)
         
         // 驗證按鈕
@@ -248,8 +295,8 @@ class ComponentShowcaseViewController: BaseViewController {
         // 可點擊卡片
         let clickableCard = CardView.makeClickable(
             content: createCardContent(),
-            onTap: { [weak self] in
-                self?.showMessage("卡片被點擊了")
+            onTap: {
+                ToastPresenter.shared.showInfo("卡片被點擊了")
             }
         )
         
@@ -270,8 +317,8 @@ class ComponentShowcaseViewController: BaseViewController {
         stackView.addArrangedSubview(sectionTitle)
         
         emptyStateView = EmptyStateView.makeNoDataState(actionTitle: "新增資料")
-        emptyStateView.actionHandler = { [weak self] in
-            self?.showMessage("空狀態按鈕被點擊")
+        emptyStateView.actionHandler = {
+            ToastPresenter.shared.showInfo("空狀態按鈕被點擊")
         }
         
         emptyStateView.snp.makeConstraints { make in
@@ -350,6 +397,41 @@ class ComponentShowcaseViewController: BaseViewController {
         stackView.addArrangedSubview(card)
     }
     
+    /// 測試 UI Presenter 元件
+    private func setupPresenterSection() {
+        let sectionTitle = createSectionTitle("UI Presenter 測試")
+        stackView.addArrangedSubview(sectionTitle)
+        
+        let card = CardView()
+        let contentStack = UIStackView()
+        contentStack.axis = .vertical
+        contentStack.spacing = AppTheme.Layout.standardPadding
+        
+        // AlertPresenter 測試
+        let alertSection = createSubsectionTitle("AlertPresenter")
+        contentStack.addArrangedSubview(alertSection)
+        
+        let alertButtons = createAlertTestButtons()
+        contentStack.addArrangedSubview(alertButtons)
+        
+        // LoadingPresenter 測試
+        let loadingSection = createSubsectionTitle("LoadingPresenter")
+        contentStack.addArrangedSubview(loadingSection)
+        
+        let loadingButtons = createLoadingTestButtons()
+        contentStack.addArrangedSubview(loadingButtons)
+        
+        // ToastPresenter 測試
+        let toastSection = createSubsectionTitle("ToastPresenter")
+        contentStack.addArrangedSubview(toastSection)
+        
+        let toastButtons = createToastTestButtons()
+        contentStack.addArrangedSubview(toastButtons)
+        
+        card.setContent(contentStack)
+        stackView.addArrangedSubview(card)
+    }
+    
     /// 測試 Combine 整合
     private func setupCombineTestSection() {
         let sectionTitle = createSectionTitle("Combine 整合測試")
@@ -366,8 +448,8 @@ class ComponentShowcaseViewController: BaseViewController {
                 }
                 return self.viewModel.performCombineTest()
             }
-            .sink { [weak self] result in
-                self?.showMessage("Combine 測試結果: \(result)")
+            .sink { result in
+                ToastPresenter.shared.showSuccess("Combine 測試結果: \(result)")
             }
             .store(in: &cancellables)
         
@@ -437,7 +519,193 @@ class ComponentShowcaseViewController: BaseViewController {
     
     private func handleButtonTap(title: String) {
         print("按鈕點擊: \(title)")
-        showMessage("\(title) 被點擊了")
+        ToastPresenter.shared.showInfo("\(title) 被點擊了")
+    }
+    
+    private func createSubsectionTitle(_ title: String) -> UILabel {
+        let label = UILabel()
+        label.text = title
+        label.font = AppTheme.Fonts.body
+        label.textColor = AppTheme.Colors.primaryText
+        return label
+    }
+    
+    private func createAlertTestButtons() -> UIStackView {
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = AppTheme.Layout.compactPadding
+        
+        let infoButton = ThemedButton(style: .secondary)
+        infoButton.setTitle("資訊提示", for: .normal)
+        infoButton.tapPublisher
+            .sink {
+                AlertPresenter.shared.showMessage("這是一個資訊提示訊息", title: "資訊")
+            }
+            .store(in: &cancellables)
+        
+        let warningButton = ThemedButton(style: .secondary)
+        warningButton.setTitle("警告提示", for: .normal)
+        warningButton.tapPublisher
+            .sink {
+                AlertPresenter.shared.showMessage("這是一個警告訊息", title: "警告")
+            }
+            .store(in: &cancellables)
+        
+        let errorButton = ThemedButton(style: .danger)
+        errorButton.setTitle("錯誤提示", for: .normal)
+        errorButton.tapPublisher
+            .sink {
+                AlertPresenter.shared.showMessage("這是一個錯誤訊息", title: "錯誤")
+            }
+            .store(in: &cancellables)
+        
+        let confirmButton = ThemedButton(style: .primary)
+        confirmButton.setTitle("確認對話框", for: .normal)
+        confirmButton.tapPublisher
+            .sink {
+                AlertPresenter.shared.showConfirmation(
+                    "確定要執行這個操作嗎？",
+                    title: "確認",
+                    onConfirm: {
+                        ToastPresenter.shared.showSuccess("操作已確認")
+                    },
+                    onCancel: {
+                        ToastPresenter.shared.showInfo("操作已取消")
+                    }
+                )
+            }
+            .store(in: &cancellables)
+        
+        let menuButton = ThemedButton(style: .text)
+        menuButton.setTitle("選項選單", for: .normal)
+        menuButton.tapPublisher
+            .sink { [weak self] in
+                self?.showMenuTest()
+            }
+            .store(in: &cancellables)
+        
+        stackView.addArrangedSubviews(infoButton, warningButton, errorButton, confirmButton, menuButton)
+        return stackView
+    }
+    
+    private func createLoadingTestButtons() -> UIStackView {
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = AppTheme.Layout.compactPadding
+        
+        let simpleLoadingButton = ThemedButton(style: .secondary)
+        simpleLoadingButton.setTitle("簡單載入", for: .normal)
+        simpleLoadingButton.tapPublisher
+            .sink {
+                LoadingPresenter.shared.show()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    LoadingPresenter.shared.hide()
+                    ToastPresenter.shared.showSuccess("載入完成")
+                }
+            }
+            .store(in: &cancellables)
+        
+        let messageLoadingButton = ThemedButton(style: .secondary)
+        messageLoadingButton.setTitle("帶訊息載入", for: .normal)
+        messageLoadingButton.tapPublisher
+            .sink {
+                LoadingPresenter.shared.show(message: "正在處理資料...")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    LoadingPresenter.shared.hide()
+                    ToastPresenter.shared.showSuccess("資料處理完成")
+                }
+            }
+            .store(in: &cancellables)
+        
+        let progressLoadingButton = ThemedButton(style: .secondary)
+        progressLoadingButton.setTitle("進度載入", for: .normal)
+        progressLoadingButton.tapPublisher
+            .sink { [weak self] in
+                self?.showProgressLoading()
+            }
+            .store(in: &cancellables)
+        
+        stackView.addArrangedSubviews(simpleLoadingButton, messageLoadingButton, progressLoadingButton)
+        return stackView
+    }
+    
+    private func createToastTestButtons() -> UIStackView {
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = AppTheme.Layout.compactPadding
+        
+        let successButton = ThemedButton(style: .primary)
+        successButton.setTitle("成功提示", for: .normal)
+        successButton.tapPublisher
+            .sink {
+                ToastPresenter.shared.showSuccess("操作成功完成")
+            }
+            .store(in: &cancellables)
+        
+        let infoButton = ThemedButton(style: .secondary)
+        infoButton.setTitle("資訊提示", for: .normal)
+        infoButton.tapPublisher
+            .sink {
+                ToastPresenter.shared.showInfo("這是一個資訊提示")
+            }
+            .store(in: &cancellables)
+        
+        let warningButton = ThemedButton(style: .secondary)
+        warningButton.setTitle("警告提示", for: .normal)
+        warningButton.tapPublisher
+            .sink {
+                ToastPresenter.shared.showWarning("這是一個警告提示")
+            }
+            .store(in: &cancellables)
+        
+        let errorButton = ThemedButton(style: .danger)
+        errorButton.setTitle("錯誤提示", for: .normal)
+        errorButton.tapPublisher
+            .sink {
+                ToastPresenter.shared.showError("這是一個錯誤提示")
+            }
+            .store(in: &cancellables)
+        
+        let customButton = ThemedButton(style: .text)
+        customButton.setTitle("自訂提示", for: .normal)
+        customButton.tapPublisher
+            .sink {
+                ToastPresenter.shared.show("自訂內容的提示訊息", duration: 3.0)
+            }
+            .store(in: &cancellables)
+        
+        stackView.addArrangedSubviews(successButton, infoButton, warningButton, errorButton, customButton)
+        return stackView
+    }
+    
+    private func showMenuTest() {
+        let options = ["選項一", "選項二", "選項三"]
+        let actions = options.map { option in
+            AlertPresenter.AlertAction.default(option) {
+                ToastPresenter.shared.showInfo("已選擇：\(option)")
+            }
+        }
+        
+        AlertPresenter.shared.showActionSheet(
+            title: "請選擇一個選項",
+            actions: actions
+        )
+    }
+    
+    private func showProgressLoading() {
+        LoadingPresenter.shared.show(message: "載入進度中...")
+        
+        var progress: Float = 0.0
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+            progress += 0.1
+            LoadingPresenter.shared.updateProgress(progress)
+            
+            if progress >= 1.0 {
+                timer.invalidate()
+                LoadingPresenter.shared.hide()
+                ToastPresenter.shared.showSuccess("進度載入完成")
+            }
+        }
     }
     
     private func validateForm() {
@@ -454,9 +722,9 @@ class ComponentShowcaseViewController: BaseViewController {
         }
         
         if isValid {
-            showMessage("表單驗證通過", title: "成功")
+            ToastPresenter.shared.showSuccess("表單驗證通過")
         } else {
-            showMessage(errors.joined(separator: "\n"), title: "驗證失敗")
+            AlertPresenter.shared.showMessage(errors.joined(separator: "\n"), title: "驗證失敗")
         }
     }
     
@@ -475,64 +743,3 @@ class ComponentShowcaseViewController: BaseViewController {
     }
 }
 
-// MARK: - ViewModel
-
-/// 元件展示頁面的 ViewModel
-class ComponentShowcaseViewModel: BaseViewModel {
-    
-    // MARK: - Published Properties
-    
-    @Published var testResult: String?
-    @Published var cards: [BusinessCard] = []
-    
-    // MARK: - Dependencies
-    
-    private let repository = ServiceContainer.shared.businessCardRepository
-    
-    // MARK: - Methods
-    
-    func updateFormData(name: String) {
-        print("表單資料更新 - 姓名: \(name)")
-    }
-    
-    func performCombineTest() -> AnyPublisher<String, Never> {
-        // 模擬非同步操作
-        return Future<String, Never> { promise in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                promise(.success("Combine 測試成功完成"))
-            }
-        }
-        .eraseToAnyPublisher()
-    }
-    
-    func createTestCard() {
-        let card = BusinessCard()
-        var mutableCard = card
-        mutableCard.name = "測試名片 \(Date().timeIntervalSince1970)"
-        mutableCard.company = "測試公司"
-        mutableCard.email = "test@example.com"
-        
-        performPublisherOperation(
-            publisher: repository.create(mutableCard),
-            onSuccess: { [weak self] card in
-                self?.testResult = "名片建立成功: \(card.name)"
-            },
-            onError: { [weak self] error in
-                self?.testResult = "建立失敗: \(error.localizedDescription)"
-            }
-        )
-    }
-    
-    func fetchAllCards() {
-        performPublisherOperation(
-            publisher: repository.fetchAll(),
-            onSuccess: { [weak self] cards in
-                self?.cards = cards
-                self?.testResult = "載入成功: \(cards.count) 張名片"
-            },
-            onError: { [weak self] error in
-                self?.testResult = "載入失敗: \(error.localizedDescription)"
-            }
-        )
-    }
-}

@@ -270,7 +270,8 @@ extension Task16VerificationTest {
         runAllTests()
         
         // 建立並顯示 UI 測試畫面
-        let showcaseVC = ComponentShowcaseViewController()
+        let viewModel = ComponentShowcaseViewModel()
+        let showcaseVC = ComponentShowcaseViewController(viewModel: viewModel)
         let navController = UINavigationController(rootViewController: showcaseVC)
         
         // 設定導航列樣式

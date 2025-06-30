@@ -18,8 +18,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: windowScene)
         
-        // 執行 Task 1.7 測試
-        Task17VerificationTest.setupTestScene(in: window)
+        // Task 1.8 ComponentShowcase 測試
+        setupComponentShowcaseTest()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {}
@@ -31,4 +31,26 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneWillEnterForeground(_ scene: UIScene) {}
 
     func sceneDidEnterBackground(_ scene: UIScene) {}
+    
+    // MARK: - Task 1.8 ComponentShowcase Test
+    
+    private func setupComponentShowcaseTest() {
+        let navigationController = UINavigationController()
+        let moduleFactory = ModuleFactory()
+        
+        // 建立 ComponentShowcase Coordinator
+        let coordinator = ComponentShowcaseCoordinator(
+            navigationController: navigationController,
+            moduleFactory: moduleFactory
+        )
+        
+        // 啟動 ComponentShowcase
+        coordinator.start()
+        
+        // 設定根視圖控制器
+        window?.rootViewController = navigationController
+        window?.makeKeyAndVisible()
+        
+        print("✅ Task 1.8: ComponentShowcase 測試應用已啟動")
+    }
 }

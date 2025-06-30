@@ -96,6 +96,14 @@ final class ModuleFactory {
             aiProcessingModule: makeAIProcessingModule()
         )
     }
+    
+    // MARK: - Component Showcase Module
+    
+    /// 建立 ComponentShowcase 模組
+    func makeComponentShowcaseModule() -> ComponentShowcaseModulable {
+        let dependencies = ComponentShowcaseDependenciesImpl()
+        return ComponentShowcaseModule(dependencies: dependencies)
+    }
 }
 
 // MARK: - Temporary Module Implementations
