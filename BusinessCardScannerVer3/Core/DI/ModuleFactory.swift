@@ -26,10 +26,14 @@ final class ModuleFactory {
     
     /// 建立 TabBar 模組
     func makeTabBarModule() -> TabBarModulable {
-        return TabBarModule(
-            cardListModule: makeCardListModule(),
-            cardCreationModule: makeCardCreationModule(),
-            settingsModule: makeSettingsModule()
+        return TabBarModule()
+    }
+    
+    /// 建立 TabBar 協調器
+    func makeTabBarCoordinator(navigationController: UINavigationController) -> TabBarCoordinator {
+        return TabBarCoordinator(
+            navigationController: navigationController,
+            moduleFactory: self
         )
     }
     
@@ -109,16 +113,7 @@ final class ModuleFactory {
 // MARK: - Temporary Module Implementations
 // 這些是暫時的實作，實際的模組會在各自的 Feature 資料夾中實作
 
-private struct TabBarModule: TabBarModulable {
-    let cardListModule: CardListModulable
-    let cardCreationModule: CardCreationModulable
-    let settingsModule: SettingsModulable
-    
-    func makeCoordinator(navigationController: UINavigationController) -> Coordinator {
-        // 實際實作會在 Features/TabBar/TabBarCoordinator.swift
-        return PlaceholderCoordinator(navigationController: navigationController)
-    }
-}
+// TabBarModule 已移至 Features/TabBar/TabBarModulable.swift
 
 private struct CardListModule: CardListModulable {
     let repository: BusinessCardRepository

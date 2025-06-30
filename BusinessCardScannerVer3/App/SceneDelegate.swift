@@ -1,6 +1,8 @@
 //
 //  SceneDelegate.swift
-//  BusinessCardScanner
+//  BusinessCardScannerVer3
+//
+//  Scene 生命週期管理，負責視窗設定和應用程式啟動
 //
 
 import UIKit
@@ -8,21 +10,27 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-
-    //
-    //  在 SceneDelegate.swift 中加入以下程式碼來驗證 Task 1.3
-    //
+    private var appCoordinator: AppCoordinator?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         window = UIWindow(windowScene: windowScene)
         
-        // Task 1.8 ComponentShowcase 測試
-        setupComponentShowcaseTest()
+        // Phase 2: 使用 AppCoordinator 啟動應用程式
+        setupAppCoordinator()
+        
+        // Phase 2 驗證測試
+        runPhase2VerificationTest()
+        
+        // 如果需要測試 ComponentShowcase，可以取消註解以下行
+        // setupComponentShowcaseTest()
     }
 
-    func sceneDidDisconnect(_ scene: UIScene) {}
+    func sceneDidDisconnect(_ scene: UIScene) {
+        // 清理協調器
+        appCoordinator = nil
+    }
 
     func sceneDidBecomeActive(_ scene: UIScene) {}
 
@@ -32,8 +40,35 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidEnterBackground(_ scene: UIScene) {}
     
-    // MARK: - Task 1.8 ComponentShowcase Test
+    // MARK: - App Setup
     
+    /// 設定 AppCoordinator 並啟動應用程式
+    private func setupAppCoordinator() {
+        guard let window = window else { return }
+        
+        print("🚀 SceneDelegate: 設定 AppCoordinator")
+        
+        // 創建 AppCoordinator
+        let coordinator = AppCoordinator(window: window)
+        self.appCoordinator = coordinator
+        
+        // 啟動應用程式
+        coordinator.start()
+        
+        print("✅ SceneDelegate: AppCoordinator 設定完成")
+    }
+    
+    /// 執行 Phase 2 驗證測試
+    private func runPhase2VerificationTest() {
+        // 延遲執行測試，確保 UI 已完全載入
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            Task21VerificationTest.setupTestScene(in: self.window)
+        }
+    }
+    
+    // MARK: - Task 1.8 ComponentShowcase Test (備用)
+    
+    /// ComponentShowcase 測試設定（開發測試用）
     private func setupComponentShowcaseTest() {
         let navigationController = UINavigationController()
         let moduleFactory = ModuleFactory()
