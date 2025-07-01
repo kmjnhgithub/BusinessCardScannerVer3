@@ -10,11 +10,20 @@ import UIKit
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-
+    // MARK: - Properties
+    
+    /// 全域螢幕方向鎖定設定
+    static var orientationLock = UIInterfaceOrientationMask.all
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         return true
+    }
+    
+    // MARK: - Orientation Support
+    
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return AppDelegate.orientationLock
     }
 
     // MARK: UISceneSession Lifecycle

@@ -23,6 +23,15 @@ class CameraViewController: BaseViewController {
     
     weak var delegate: CameraViewControllerDelegate?
     
+    /// 支援的螢幕方向 - 只支援直式
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .portrait
+    }
+    
+    override var shouldAutorotate: Bool {
+        return false
+    }
+    
     /// 相機會話管理
     private var captureSession: AVCaptureSession?
     private var photoOutput: AVCapturePhotoOutput?
@@ -36,6 +45,9 @@ class CameraViewController: BaseViewController {
     /// 相機預覽容器
     private let previewContainer = UIView()
     
+    /// 掃描引導視圖
+    private let guideView = CameraGuideView()
+    
     /// 控制面板容器
     private let controlsContainer = UIView()
     
@@ -45,11 +57,8 @@ class CameraViewController: BaseViewController {
     /// 取消按鈕
     private let cancelButton = UIButton(type: .system)
     
-    /// 切換相機按鈕（前/後鏡頭）
-    private let switchCameraButton = UIButton(type: .system)
-    
-    /// 閃光燈按鈕
-    private let flashButton = UIButton(type: .system)
+    /// 相簿按鈕
+    private let galleryButton = UIButton(type: .system)
     
     /// 狀態指示器
     private let statusLabel = UILabel()
@@ -67,6 +76,15 @@ class CameraViewController: BaseViewController {
         // 隱藏導航列
         navigationController?.setNavigationBarHidden(true, animated: animated)
         
+        // 鎖定為直式方向
+        AppDelegate.orientationLock = .portrait
+        UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+        if #available(iOS 16.0, *) {
+            self.setNeedsUpdateOfSupportedInterfaceOrientations()
+        } else {
+            UIViewController.attemptRotationToDeviceOrientation()
+        }
+        
         // 檢查權限並設定相機
         checkPermissionAndSetupCamera()
     }
@@ -76,6 +94,9 @@ class CameraViewController: BaseViewController {
         
         // 顯示導航列
         navigationController?.setNavigationBarHidden(false, animated: animated)
+        
+        // 恢復螢幕方向設定
+        AppDelegate.orientationLock = .all
         
         // 停止相機會話
         stopCameraSession()
@@ -90,8 +111,11 @@ class CameraViewController: BaseViewController {
         previewContainer.backgroundColor = .black
         view.addSubview(previewContainer)
         
+        // 設定掃描引導視圖
+        view.addSubview(guideView)
+        
         // 設定控制面板
-        controlsContainer.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        controlsContainer.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         view.addSubview(controlsContainer)
         
         // 設定拍照按鈕
@@ -111,37 +135,37 @@ class CameraViewController: BaseViewController {
             make.bottom.equalTo(controlsContainer.snp.top)
         }
         
-        // 控制面板約束
+        // 掃描引導視圖約束
+        guideView.snp.makeConstraints { make in
+            make.edges.equalTo(previewContainer)
+        }
+        
+        // 控制面板約束 - 調整高度和底部間距
         controlsContainer.snp.makeConstraints { make in
-            make.leading.trailing.bottom.equalToSuperview()
-            make.height.equalTo(120 + view.safeAreaInsets.bottom)
+            make.leading.trailing.equalToSuperview()
+            make.bottom.equalTo(view.safeAreaLayoutGuide).offset(0) // 往上移30pt
+            make.height.equalTo(150) // 增加高度以容納調整後的按鈕
         }
         
-        // 拍照按鈕約束
+        // 拍照按鈕約束（中央）
         captureButton.snp.makeConstraints { make in
-            make.center.equalTo(controlsContainer)
-            make.width.height.equalTo(80)
+            make.centerX.equalTo(controlsContainer)
+            make.centerY.equalTo(controlsContainer).offset(-20) // 往上偏移
+            make.width.height.equalTo(AppTheme.Layout.cameraShutterSize)
         }
         
-        // 取消按鈕約束
+        // 相簿按鈕約束（左側）
+        galleryButton.snp.makeConstraints { make in
+            make.leading.equalTo(controlsContainer).offset(AppTheme.Layout.largePadding)
+            make.centerY.equalTo(captureButton)
+            make.width.height.equalTo(44)
+        }
+        
+        // 取消按鈕約束（右側）
         cancelButton.snp.makeConstraints { make in
-            make.leading.equalTo(controlsContainer).offset(20)
+            make.trailing.equalTo(controlsContainer).offset(-AppTheme.Layout.largePadding)
             make.centerY.equalTo(captureButton)
-            make.width.height.equalTo(50)
-        }
-        
-        // 切換相機按鈕約束
-        switchCameraButton.snp.makeConstraints { make in
-            make.trailing.equalTo(controlsContainer).offset(-20)
-            make.centerY.equalTo(captureButton)
-            make.width.height.equalTo(50)
-        }
-        
-        // 閃光燈按鈕約束
-        flashButton.snp.makeConstraints { make in
-            make.top.equalTo(controlsContainer).offset(10)
-            make.trailing.equalTo(controlsContainer).offset(-20)
-            make.width.height.equalTo(40)
+            make.width.height.equalTo(44)
         }
         
         // 狀態標籤約束
@@ -155,54 +179,40 @@ class CameraViewController: BaseViewController {
         // 設定按鈕動作
         captureButton.addTarget(self, action: #selector(captureButtonTapped), for: .touchUpInside)
         cancelButton.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
-        switchCameraButton.addTarget(self, action: #selector(switchCameraButtonTapped), for: .touchUpInside)
-        flashButton.addTarget(self, action: #selector(flashButtonTapped), for: .touchUpInside)
+        galleryButton.addTarget(self, action: #selector(galleryButtonTapped), for: .touchUpInside)
     }
     
     // MARK: - UI Setup Helpers
     
     private func setupCaptureButton() {
+        // 根據UI設計規範：白色圓形按鈕，70pt直徑，2pt白色邊框
         captureButton.backgroundColor = .white
-        captureButton.layer.cornerRadius = 40
-        captureButton.layer.borderWidth = 4
-        captureButton.layer.borderColor = UIColor.lightGray.cgColor
+        captureButton.layer.cornerRadius = AppTheme.Layout.cameraShutterSize / 2
+        captureButton.layer.borderWidth = 2
+        captureButton.layer.borderColor = UIColor.white.cgColor
         captureButton.setTitle("", for: .normal)
         
-        // 添加拍照圖標
-        let cameraIcon = UIImageView(image: UIImage(systemName: "camera.fill"))
-        cameraIcon.tintColor = .black
-        cameraIcon.contentMode = .scaleAspectFit
-        captureButton.addSubview(cameraIcon)
-        
-        cameraIcon.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-            make.width.height.equalTo(30)
-        }
+        // 按下效果
+        captureButton.addTarget(self, action: #selector(captureButtonTouchDown), for: .touchDown)
+        captureButton.addTarget(self, action: #selector(captureButtonTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
         
         controlsContainer.addSubview(captureButton)
     }
     
     private func setupControlButtons() {
-        // 取消按鈕
+        // 相簿按鈕（左側）
+        galleryButton.setImage(UIImage(systemName: "photo.on.rectangle"), for: .normal)
+        galleryButton.tintColor = .white
+        galleryButton.backgroundColor = .clear
+        galleryButton.layer.cornerRadius = 22
+        controlsContainer.addSubview(galleryButton)
+        
+        // 取消按鈕（右側）
         cancelButton.setImage(UIImage(systemName: "xmark"), for: .normal)
         cancelButton.tintColor = .white
-        cancelButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        cancelButton.layer.cornerRadius = 25
+        cancelButton.backgroundColor = .clear
+        cancelButton.layer.cornerRadius = 22
         controlsContainer.addSubview(cancelButton)
-        
-        // 切換相機按鈕
-        switchCameraButton.setImage(UIImage(systemName: "camera.rotate"), for: .normal)
-        switchCameraButton.tintColor = .white
-        switchCameraButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        switchCameraButton.layer.cornerRadius = 25
-        controlsContainer.addSubview(switchCameraButton)
-        
-        // 閃光燈按鈕
-        flashButton.setImage(UIImage(systemName: "bolt.slash"), for: .normal)
-        flashButton.tintColor = .white
-        flashButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        flashButton.layer.cornerRadius = 20
-        controlsContainer.addSubview(flashButton)
     }
     
     private func setupStatusLabel() {
@@ -303,8 +313,9 @@ class CameraViewController: BaseViewController {
         previewContainer.layer.addSublayer(previewLayer)
         videoPreviewLayer = previewLayer
         
-        // 隱藏狀態標籤
+        // 隱藏狀態標籤，顯示掃描引導
         statusLabel.isHidden = true
+        guideView.isHidden = false
     }
     
     private func startCameraSession() {
@@ -340,14 +351,22 @@ class CameraViewController: BaseViewController {
         delegate?.cameraViewControllerDidCancel(self)
     }
     
-    @objc private func switchCameraButtonTapped() {
-        // TODO: Task 4.2.3 實作相機切換
-        print("🔄 切換相機（待實作）")
+    @objc private func galleryButtonTapped() {
+        // 切換到相簿選擇
+        print("📁 切換到相簿選擇")
+        // TODO: Task 4.3 - 實作PhotoPicker切換
     }
     
-    @objc private func flashButtonTapped() {
-        // TODO: Task 4.2.3 實作閃光燈控制
-        print("⚡ 閃光燈控制（待實作）")
+    @objc private func captureButtonTouchDown() {
+        UIView.animate(withDuration: AppTheme.Animation.fastDuration) {
+            self.captureButton.transform = CGAffineTransform(scaleX: AppTheme.Animation.buttonPressScale, y: AppTheme.Animation.buttonPressScale)
+        }
+    }
+    
+    @objc private func captureButtonTouchUp() {
+        UIView.animate(withDuration: AppTheme.Animation.fastDuration) {
+            self.captureButton.transform = .identity
+        }
     }
     
     // MARK: - Photo Capture
@@ -400,8 +419,10 @@ class CameraViewController: BaseViewController {
         
         // 隱藏相機控制按鈕
         captureButton.isEnabled = false
-        switchCameraButton.isEnabled = false
-        flashButton.isEnabled = false
+        galleryButton.isEnabled = false
+        
+        // 隱藏掃描引導
+        guideView.isHidden = true
     }
     
     private func showCameraError(_ message: String) {
@@ -432,7 +453,12 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
         
         print("✅ 照片拍攝成功")
         
-        // 通知代理
-        delegate?.cameraViewController(self, didCaptureImage: image)
+        // 顯示成功狀態
+        guideView.showSuccessState()
+        
+        // 延遲後通知代理
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.delegate?.cameraViewController(self, didCaptureImage: image)
+        }
     }
 }

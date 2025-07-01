@@ -51,13 +51,21 @@ final class AppCoordinator: BaseCoordinator {
     private func setupServices() {
         print("⚙️ AppCoordinator: 初始化服務容器")
         
-        // 這裡可以初始化需要在啟動時設定的服務
-        // 例如：主題設定、分析工具、推播通知等
+        // 設定應用程式使用固定的 Light Mode，避免 Dark Mode 閃爍
+        setupAppearance()
         
-        // 設定主題（如果有暗色模式切換）
-        // ThemeManager.shared.applyTheme()
+        // 這裡可以初始化需要在啟動時設定的服務
+        // 例如：分析工具、推播通知等
         
         print("✅ AppCoordinator: 服務容器初始化完成")
+    }
+    
+    /// 設定應用程式外觀，強制使用 Light Mode
+    private func setupAppearance() {
+        // 強制整個應用程式使用 Light Mode，避免 Dark Mode 閃爍
+        if #available(iOS 13.0, *) {
+            window.overrideUserInterfaceStyle = .light
+        }
     }
     
     /// 啟動 TabBar 流程
@@ -89,6 +97,8 @@ final class AppCoordinator: BaseCoordinator {
     
     /// 設定主視窗
     private func setupWindow() {
+        // 設定 Window 背景色，確保與設計規範一致，避免 Dark Mode 下的閃爍
+        window.backgroundColor = AppTheme.Colors.background
         window.rootViewController = navigationController
         window.makeKeyAndVisible()
         

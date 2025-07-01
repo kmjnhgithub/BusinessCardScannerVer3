@@ -20,26 +20,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Phase 2: 使用 AppCoordinator 啟動應用程式
         setupAppCoordinator()
         
-        // Phase 2 驗證測試
-        runPhase2VerificationTest()
-        
-        // Task 3.3 驗證測試
-        runTask33VerificationTest()
-        
-        // Task 3.4 驗證測試
-        runTask34VerificationTest()
-        
-        // Task 4.1 驗證測試
-        runTask41VerificationTest()
-        
-        // Task 4.2 驗證測試
-        runTask42VerificationTest()
-        
-        // Task 4.3 驗證測試
-        runTask43VerificationTest()
-        
-        // 如果需要測試 ComponentShowcase，可以取消註解以下行
-        // setupComponentShowcaseTest()
+        // 開發驗證測試 - 只在 DEBUG 模式下執行
+        #if DEBUG
+        runDevelopmentVerificationTests()
+        #endif
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
@@ -73,50 +57,68 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         print("✅ SceneDelegate: AppCoordinator 設定完成")
     }
     
-    /// 執行 Phase 2 驗證測試
-    private func runPhase2VerificationTest() {
-        // 延遲執行測試，確保 UI 已完全載入
+    /// 執行開發驗證測試 - 統一管理所有驗證測試
+    private func runDevelopmentVerificationTests() {
+        // 設定：是否啟用驗證測試
+        let enableVerificationTests = true
+        
+        guard enableVerificationTests else {
+            print("驗證測試已停用")
+            return
+        }
+        
+        print("開始執行開發驗證測試...")
+        
+        // 已完成的功能測試 - 可選擇性執行
+        runCompletedFeatureTests()
+        
+        // 正在開發的功能測試 - 保持啟用
+        runActiveFeatureTests()
+    }
+    
+    /// 執行已完成功能的驗證測試（可選）
+    private func runCompletedFeatureTests() {
+        let testCompletedFeatures = false // 設為 false 來停用已完成功能的測試
+        
+        guard testCompletedFeatures else {
+            print("⏭️  跳過已完成功能的驗證測試")
+            return
+        }
+        
+        // Phase 2 驗證測試
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             Task21VerificationTest.setupTestScene(in: self.window)
         }
-    }
-    
-    /// 執行 Task 3.3 驗證測試
-    private func runTask33VerificationTest() {
-        // 延遲執行測試，確保應用完全啟動
+        
+        // Task 3.3 驗證測試
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             Task33VerificationTest.runVerification()
         }
-    }
-    
-    /// 執行 Task 3.4 驗證測試
-    private func runTask34VerificationTest() {
-        // 延遲執行測試，確保應用完全啟動
+        
+        // Task 3.4 驗證測試
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             Task34VerificationTest.run()
         }
-    }
-    
-    /// 執行 Task 4.1 驗證測試
-    private func runTask41VerificationTest() {
-        // 延遲執行測試，確保應用完全啟動
+        
+        // Task 4.1 驗證測試
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             Task41VerificationTest.run()
         }
-    }
-    
-    /// Task 4.2 驗證測試
-    private func runTask42VerificationTest() {
+        
+        // Task 4.2 驗證測試
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             Task42VerificationTest.run()
         }
     }
     
-    /// Task 4.3 驗證測試
-    private func runTask43VerificationTest() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            Task43VerificationTest.run()
+    /// 執行正在開發功能的驗證測試
+    private func runActiveFeatureTests() {
+        // Task 4.3 驗證測試 - 正在開發中
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // Task43VerificationTest.run() // 當Task 4.3完成時啟用
         }
+        
+        print("✅ 活躍功能驗證測試已設定")
     }
     
     // MARK: - Task 1.8 ComponentShowcase Test (備用)

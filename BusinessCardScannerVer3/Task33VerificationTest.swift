@@ -26,7 +26,7 @@ class Task33VerificationTest {
         
         // 3. 測試 Coordinator 委託功能
         testCoordinatorDelegate()
-        
+            
         // 4. 測試刪除同步性
         testDeleteSynchronization()
         
