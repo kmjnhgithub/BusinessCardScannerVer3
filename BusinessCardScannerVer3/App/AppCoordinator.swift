@@ -248,14 +248,8 @@ extension AppCoordinator: CameraModuleOutput {
     func cameraDidCaptureImage(_ image: UIImage) {
         print("✅ AppCoordinator: 收到拍攝的照片")
         
-        // TODO: Task 4.3 實作 OCR 處理
-        // 暫時顯示成功訊息
-        guard let topViewController = getTopViewController() else { return }
-        
-        AlertPresenter.shared.showMessage(
-            "照片拍攝成功！\nOCR 處理功能將在 Task 4.3 中實作",
-            title: "拍攝完成"
-        )
+        // 執行 OCR 處理
+        processImageWithOCR(image)
         
         // 清理協調器
         cleanupFinishedCoordinators()
@@ -276,14 +270,8 @@ extension AppCoordinator: PhotoPickerModuleOutput {
     func photoPickerDidSelectImage(_ image: UIImage) {
         print("✅ AppCoordinator: 收到選擇的照片")
         
-        // TODO: Task 4.3 實作 OCR 處理
-        // 暫時顯示成功訊息
-        guard let topViewController = getTopViewController() else { return }
-        
-        AlertPresenter.shared.showMessage(
-            "照片選擇成功！\nOCR 處理功能將在 Task 4.3 中實作",
-            title: "選擇完成"
-        )
+        // 執行 OCR 處理
+        processImageWithOCR(image)
         
         // 清理協調器
         cleanupFinishedCoordinators()
@@ -307,5 +295,131 @@ extension AppCoordinator {
         childCoordinators.removeAll { coordinator in
             return coordinator is CameraCoordinator || coordinator is PhotoPickerCoordinator
         }
+    }
+    
+    /// 使用 OCR 處理圖片
+    /// - Parameter image: 要處理的圖片
+    private func processImageWithOCR(_ image: UIImage) {
+        print("🔍 AppCoordinator: 開始 OCR 處理")
+        
+        // 顯示處理中提示
+        guard getTopViewController() != nil else { return }
+        
+        // 使用 AlertPresenter 顯示處理中狀態
+        AlertPresenter.shared.showMessage(
+            "正在識別名片內容，請稍候...",
+            title: "處理中"
+        )
+        
+        // 建立 OCR 處理器並執行
+        let ocrProcessor = OCRProcessor()
+        
+        ocrProcessor.processImage(image) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.handleOCRResult(result, originalImage: image)
+            }
+        }
+    }
+    
+    /// 處理 OCR 結果
+    /// - Parameters:
+    ///   - result: OCR 處理結果
+    ///   - originalImage: 原始圖片
+    private func handleOCRResult(_ result: Result<OCRProcessingResult, OCRError>, originalImage: UIImage) {
+        guard let topViewController = getTopViewController() else { return }
+        
+        switch result {
+        case .success(let processingResult):
+            print("✅ AppCoordinator: OCR 處理成功")
+            
+            // 顯示識別結果
+            showOCRResult(processingResult)
+            
+        case .failure(let error):
+            print("❌ AppCoordinator: OCR 處理失敗 - \(error.localizedDescription)")
+            
+            // 顯示錯誤訊息
+            AlertPresenter.shared.showMessage(
+                "文字識別失敗：\(error.localizedDescription)\n\n請確保照片清晰且包含文字內容。",
+                title: "識別失敗"
+            )
+        }
+    }
+    
+    /// 顯示 OCR 識別結果
+    /// - Parameter result: OCR 處理結果
+    private func showOCRResult(_ result: OCRProcessingResult) {
+        guard let topViewController = getTopViewController() else { return }
+        
+        // 建立結果摘要
+        let ocrResult = result.ocrResult
+        let extractedFields = result.extractedFields
+        
+        var message = "📊 識別統計:\n"
+        message += "• 文字長度: \(ocrResult.recognizedText.count) 字元\n"
+        message += "• 信心度: \(String(format: "%.1f", ocrResult.confidence * 100))%\n"
+        message += "• 處理時間: \(String(format: "%.2f", ocrResult.processingTime)) 秒\n\n"
+        
+        message += "🏷️ 提取欄位 (\(extractedFields.count) 個):\n"
+        
+        if let name = extractedFields["name"] {
+            message += "• 姓名: \(name)\n"
+        }
+        if let company = extractedFields["company"] {
+            message += "• 公司: \(company)\n"
+        }
+        if let title = extractedFields["title"] {
+            message += "• 職位: \(title)\n"
+        }
+        if let phone = extractedFields["phone"] {
+            message += "• 電話: \(phone)\n"
+        }
+        if let email = extractedFields["email"] {
+            message += "• 郵件: \(email)\n"
+        }
+        if let website = extractedFields["website"] {
+            message += "• 網站: \(website)\n"
+        }
+        if let address = extractedFields["address"] {
+            message += "• 地址: \(address)\n"
+        }
+        
+        if extractedFields.isEmpty {
+            message += "• 未自動識別到特定欄位\n"
+        }
+        
+        message += "\n📝 原始識別文字:\n"
+        message += result.preprocessedText.prefix(200)
+        if result.preprocessedText.count > 200 {
+            message += "..."
+        }
+        
+        // 顯示結果 Alert
+        let alert = UIAlertController(
+            title: "✅ 識別完成",
+            message: message,
+            preferredStyle: .alert
+        )
+        
+        // 保存按鈕 (未來實作)
+        alert.addAction(UIAlertAction(title: "保存名片", style: .default) { _ in
+            // TODO: Task 5.1 實作保存功能
+            AlertPresenter.shared.showMessage(
+                "保存功能將在後續任務中實作",
+                title: "開發中"
+            )
+        })
+        
+        // 重新拍攝按鈕
+        alert.addAction(UIAlertAction(title: "重新拍攝", style: .default) { [weak self] _ in
+            self?.handleCameraModule()
+        })
+        
+        // 關閉按鈕
+        alert.addAction(UIAlertAction(title: "關閉", style: .cancel))
+        
+        topViewController.present(alert, animated: true)
+        
+        print("📋 AppCoordinator: OCR 結果已顯示")
     }
 }

@@ -36,7 +36,7 @@ final class ServiceContainer {
     }()
     
     private(set) lazy var visionService: VisionService = {
-        return VisionService()
+        return VisionService.shared
     }()
     
     private(set) lazy var permissionManager: PermissionManager = {

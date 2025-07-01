@@ -35,6 +35,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Task 4.2 驗證測試
         runTask42VerificationTest()
         
+        // Task 4.3 驗證測試
+        runTask43VerificationTest()
+        
         // 如果需要測試 ComponentShowcase，可以取消註解以下行
         // setupComponentShowcaseTest()
     }
@@ -106,6 +109,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func runTask42VerificationTest() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             Task42VerificationTest.run()
+        }
+    }
+    
+    /// Task 4.3 驗證測試
+    private func runTask43VerificationTest() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            Task43VerificationTest.run()
         }
     }
     
