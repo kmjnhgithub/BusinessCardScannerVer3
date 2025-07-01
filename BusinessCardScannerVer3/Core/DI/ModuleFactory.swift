@@ -184,7 +184,7 @@ private struct SettingsModule: SettingsModulable {
 private class PlaceholderCoordinator: BaseCoordinator {
     override func start() {
         let viewController = UIViewController()
-        viewController.view.backgroundColor = .systemBackground
+        viewController.view.backgroundColor = AppTheme.Colors.background
         viewController.title = "Placeholder"
         push(viewController)
     }

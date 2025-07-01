@@ -28,8 +28,8 @@ class BaseViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // 設定基本樣式
-        view.backgroundColor = .systemBackground
+        // 設定基本樣式（遵循 UI 設計規範文檔 v1.0）
+        view.backgroundColor = AppTheme.Colors.background
         
         // 設定導航列
         configureNavigationBar()
