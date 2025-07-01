@@ -121,28 +121,77 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
     private func handleCameraModule() {
         print("📸 AppCoordinator: 處理相機模組請求")
         
-        // 目前顯示相機功能的演示 Alert
-        showCameraFeatureDemo()
+        // 取得目前的導航控制器
+        guard let topViewController = getTopViewController(),
+              let navigationController = topViewController.navigationController else {
+            print("❌ AppCoordinator: 無法取得導航控制器")
+            return
+        }
         
-        // 未來實作 (Phase 4)：
-        // let cardCreationCoordinator = moduleFactory.makeCardCreationCoordinator(...)
-        // cardCreationCoordinator.start()
+        // 顯示新增名片選項
+        showAddCardOptions(from: navigationController)
     }
     
-    /// 顯示相機功能演示
-    private func showCameraFeatureDemo() {
+    /// 顯示新增名片選項
+    private func showAddCardOptions(from navigationController: UINavigationController) {
         guard let topViewController = getTopViewController() else { return }
         
-        let alert = UIAlertController(
-            title: "📸 相機功能",
-            message: "相機模組將在 Phase 4 實作\n\n支援功能：\n• 拍攝名片照片\n• 從相簿選擇照片\n• 手動輸入名片資訊",
-            preferredStyle: .alert
+        let actions: [AlertPresenter.AlertAction] = [
+            .default("拍照") { [weak self] in
+                self?.presentCameraModule(from: navigationController)
+            },
+            .default("從相簿選擇") { [weak self] in
+                self?.presentPhotoPickerModule(from: navigationController)
+            },
+            .default("手動輸入") { [weak self] in
+                self?.presentManualInputModule(from: navigationController)
+            },
+            .cancel("取消", nil)
+        ]
+        
+        AlertPresenter.shared.showActionSheet(
+            title: "新增名片",
+            message: "選擇新增方式",
+            actions: actions,
+            sourceView: topViewController.view
         )
         
-        alert.addAction(UIAlertAction(title: "了解", style: .default))
+        print("✅ AppCoordinator: 顯示新增名片選項")
+    }
+    
+    /// 呈現相機模組
+    private func presentCameraModule(from navigationController: UINavigationController) {
+        print("📸 AppCoordinator: 啟動相機模組")
         
-        topViewController.present(alert, animated: true)
-        print("✅ AppCoordinator: 顯示相機功能演示")
+        let cameraCoordinator = moduleFactory.makeCameraCoordinator(navigationController: navigationController)
+        cameraCoordinator.moduleOutput = self
+        
+        childCoordinators.append(cameraCoordinator)
+        cameraCoordinator.start()
+    }
+    
+    /// 呈現相簿選擇模組
+    private func presentPhotoPickerModule(from navigationController: UINavigationController) {
+        print("📁 AppCoordinator: 啟動相簿選擇模組")
+        
+        let photoPickerCoordinator = moduleFactory.makePhotoPickerCoordinator(navigationController: navigationController)
+        photoPickerCoordinator.moduleOutput = self
+        
+        childCoordinators.append(photoPickerCoordinator)
+        photoPickerCoordinator.start()
+    }
+    
+    /// 呈現手動輸入模組
+    private func presentManualInputModule(from navigationController: UINavigationController) {
+        print("✏️ AppCoordinator: 啟動手動輸入模組")
+        
+        // TODO: Task 5.1 實作手動輸入模組
+        guard let topViewController = getTopViewController() else { return }
+        
+        AlertPresenter.shared.showMessage(
+            "手動輸入功能將在 Task 5.1 中實作",
+            title: "開發中"
+        )
     }
     
     /// 取得目前最上層的視圖控制器
@@ -190,4 +239,73 @@ enum AppModule {
 /// TabBar 協調器代理協議
 protocol TabBarCoordinatorDelegate: AnyObject {
     func tabBarCoordinator(_ coordinator: TabBarCoordinator, didRequestModule moduleType: AppModule)
+}
+
+// MARK: - CameraModuleOutput
+
+extension AppCoordinator: CameraModuleOutput {
+    
+    func cameraDidCaptureImage(_ image: UIImage) {
+        print("✅ AppCoordinator: 收到拍攝的照片")
+        
+        // TODO: Task 4.3 實作 OCR 處理
+        // 暫時顯示成功訊息
+        guard let topViewController = getTopViewController() else { return }
+        
+        AlertPresenter.shared.showMessage(
+            "照片拍攝成功！\nOCR 處理功能將在 Task 4.3 中實作",
+            title: "拍攝完成"
+        )
+        
+        // 清理協調器
+        cleanupFinishedCoordinators()
+    }
+    
+    func cameraDidCancel() {
+        print("❌ AppCoordinator: 相機拍攝已取消")
+        
+        // 清理協調器
+        cleanupFinishedCoordinators()
+    }
+}
+
+// MARK: - PhotoPickerModuleOutput
+
+extension AppCoordinator: PhotoPickerModuleOutput {
+    
+    func photoPickerDidSelectImage(_ image: UIImage) {
+        print("✅ AppCoordinator: 收到選擇的照片")
+        
+        // TODO: Task 4.3 實作 OCR 處理
+        // 暫時顯示成功訊息
+        guard let topViewController = getTopViewController() else { return }
+        
+        AlertPresenter.shared.showMessage(
+            "照片選擇成功！\nOCR 處理功能將在 Task 4.3 中實作",
+            title: "選擇完成"
+        )
+        
+        // 清理協調器
+        cleanupFinishedCoordinators()
+    }
+    
+    func photoPickerDidCancel() {
+        print("❌ AppCoordinator: 相簿選擇已取消")
+        
+        // 清理協調器
+        cleanupFinishedCoordinators()
+    }
+}
+
+// MARK: - Helper Methods
+
+extension AppCoordinator {
+    
+    /// 清理已完成的子協調器
+    private func cleanupFinishedCoordinators() {
+        // 移除已完成的相機和相簿選擇協調器
+        childCoordinators.removeAll { coordinator in
+            return coordinator is CameraCoordinator || coordinator is PhotoPickerCoordinator
+        }
+    }
 }

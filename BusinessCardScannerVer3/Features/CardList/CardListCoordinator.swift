@@ -8,6 +8,13 @@
 import UIKit
 import Combine
 
+/// 新增名片的選項
+enum AddCardOption {
+    case camera        // 拍照
+    case photoLibrary  // 從相簿選擇
+    case manual        // 手動輸入
+}
+
 final class CardListCoordinator: BaseCoordinator {
     
     // MARK: - Properties
@@ -76,9 +83,104 @@ final class CardListCoordinator: BaseCoordinator {
     
     /// 顯示新增名片選項
     private func showAddCardOptions() {
-        // TODO: Task 3.4 實作新增選項 AlertPresenter
-        print("➕ 顯示新增名片選項")
-        moduleOutput?.cardListDidRequestNewCard()
+        guard let viewController = self.viewController else { return }
+        
+        // 建立選項動作
+        let actions: [AlertPresenter.AlertAction] = [
+            .default("拍照") { [weak self] in
+                self?.handleAddOption(.camera)
+            },
+            .default("從相簿選擇") { [weak self] in
+                self?.handleAddOption(.photoLibrary)
+            },
+            .default("手動輸入") { [weak self] in
+                self?.handleAddOption(.manual)
+            },
+            .cancel("取消", nil)
+        ]
+        
+        // 顯示選項選單
+        AlertPresenter.shared.showActionSheet(
+            title: "新增名片",
+            message: "選擇新增方式",
+            actions: actions,
+            sourceView: viewController.view
+        )
+    }
+    
+    /// 處理新增選項選擇
+    private func handleAddOption(_ option: AddCardOption) {
+        print("📸 選擇新增方式: \(option)")
+        
+        switch option {
+        case .camera:
+            checkCameraPermissionAndProceed()
+        case .photoLibrary:
+            checkPhotoLibraryPermissionAndProceed()
+        case .manual:
+            // 手動輸入不需要權限檢查
+            moduleOutput?.cardListDidRequestNewCard(with: option)
+        }
+    }
+    
+    /// 檢查相機權限並繼續
+    private func checkCameraPermissionAndProceed() {
+        let permissionManager = ServiceContainer.shared.permissionManager
+        
+        permissionManager.requestCameraPermission { [weak self] status in
+            DispatchQueue.main.async {
+                switch status {
+                case .authorized:
+                    // 權限已授權，繼續拍照流程
+                    print("✅ 相機權限已授權")
+                    self?.moduleOutput?.cardListDidRequestNewCard(with: .camera)
+                    
+                case .denied, .restricted:
+                    // 權限被拒絕，顯示設定提示
+                    print("❌ 相機權限被拒絕")
+                    self?.showPermissionDeniedAlert(for: .camera)
+                    
+                case .notDetermined:
+                    // 這種情況理論上不應該發生，因為 requestCameraPermission 會處理
+                    print("⚠️ 相機權限狀態未確定")
+                    self?.showPermissionDeniedAlert(for: .camera)
+                }
+            }
+        }
+    }
+    
+    /// 檢查相簿權限並繼續
+    private func checkPhotoLibraryPermissionAndProceed() {
+        let permissionManager = ServiceContainer.shared.permissionManager
+        
+        permissionManager.requestPhotoLibraryPermission { [weak self] status in
+            DispatchQueue.main.async {
+                switch status {
+                case .authorized:
+                    // 權限已授權，繼續相簿選擇流程
+                    print("✅ 相簿權限已授權")
+                    self?.moduleOutput?.cardListDidRequestNewCard(with: .photoLibrary)
+                    
+                case .denied, .restricted:
+                    // 權限被拒絕，顯示設定提示
+                    print("❌ 相簿權限被拒絕")
+                    self?.showPermissionDeniedAlert(for: .photoLibrary)
+                    
+                case .notDetermined:
+                    // 這種情況理論上不應該發生，因為 requestPhotoLibraryPermission 會處理
+                    print("⚠️ 相簿權限狀態未確定")
+                    self?.showPermissionDeniedAlert(for: .photoLibrary)
+                }
+            }
+        }
+    }
+    
+    /// 顯示權限被拒絕的提示
+    private func showPermissionDeniedAlert(for type: PermissionManager.PermissionType) {
+        guard let viewController = self.viewController else { return }
+        
+        let permissionManager = ServiceContainer.shared.permissionManager
+        permissionManager.showPermissionSettingsAlert(for: type, from: viewController)
     }
 }
 

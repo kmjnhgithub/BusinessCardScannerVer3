@@ -20,4 +20,5 @@ protocol CardListModulable {
 protocol CardListModuleOutput: AnyObject {
     func cardListDidSelectCard(_ card: BusinessCard)
     func cardListDidRequestNewCard()
+    func cardListDidRequestNewCard(with option: AddCardOption)
 }

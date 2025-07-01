@@ -19,5 +19,9 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相機來拍攝名片，以便進行文字識別和資料解析。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>需要存取照片庫以選擇名片照片，進行文字識別和資料解析。</string>
 </dict>
 </plist>

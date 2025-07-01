@@ -121,6 +121,13 @@ class CardListViewModel: BaseViewModel {
         }
     }
     
+    /// 處理新增名片請求
+    /// - Note: 這個方法會被 ViewController 呼叫，通知 Coordinator 顯示新增選項
+    func handleAddCard() {
+        // ViewModel 本身不處理導航，直接通知 Coordinator
+        print("📝 使用者請求新增名片")
+    }
+    
     // MARK: - Private Methods
     
     /// 過濾名片資料

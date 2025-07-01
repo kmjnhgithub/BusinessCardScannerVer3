@@ -40,7 +40,7 @@ final class ServiceContainer {
     }()
     
     private(set) lazy var permissionManager: PermissionManager = {
-        return PermissionManager()
+        return PermissionManager.shared
     }()
     
     private(set) lazy var keychainService: KeychainService = {
