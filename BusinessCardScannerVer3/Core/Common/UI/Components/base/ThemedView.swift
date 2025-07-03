@@ -17,12 +17,16 @@ class ThemedView: UIView {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
+        // 🔧 修復 Auto Layout 約束衝突：確保使用 SnapKit 約束而非 AutoresizingMask
+        translatesAutoresizingMaskIntoConstraints = false
         setupView()
         setupConstraints()
     }
     
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        // 🔧 修復 Auto Layout 約束衝突：確保使用 SnapKit 約束而非 AutoresizingMask
+        translatesAutoresizingMaskIntoConstraints = false
         setupView()
         setupConstraints()
     }

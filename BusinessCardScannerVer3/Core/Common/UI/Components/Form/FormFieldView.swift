@@ -160,6 +160,8 @@ class FormFieldView: ThemedView {
         
         // 加入子視圖
         [titleLabel, requiredIndicator, iconImageView, textField, helperLabel].forEach {
+            // 🔧 修復 Auto Layout 約束衝突：確保所有子視圖正確設置 translatesAutoresizingMaskIntoConstraints
+            $0.translatesAutoresizingMaskIntoConstraints = false
             addSubview($0)
         }
     }

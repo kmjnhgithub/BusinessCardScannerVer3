@@ -45,11 +45,15 @@ class ThemedTextField: UITextField {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
+        // 🔧 修復 Auto Layout 約束衝突：確保使用 SnapKit 約束而非 AutoresizingMask
+        translatesAutoresizingMaskIntoConstraints = false
         setupTextField()
     }
     
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        // 🔧 修復 Auto Layout 約束衝突：確保使用 SnapKit 約束而非 AutoresizingMask
+        translatesAutoresizingMaskIntoConstraints = false
         setupTextField()
     }
     
@@ -65,6 +69,7 @@ class ThemedTextField: UITextField {
         borderStyle = .none
         
         // 設定底線
+        underlineView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(underlineView)
         underlineView.backgroundColor = AppTheme.Colors.separator
         underlineView.snp.makeConstraints { make in
@@ -73,6 +78,7 @@ class ThemedTextField: UITextField {
         }
         
         // 設定錯誤標籤
+        errorLabel.translatesAutoresizingMaskIntoConstraints = false
         errorLabel.font = AppTheme.Fonts.errorMessage
         errorLabel.textColor = AppTheme.Colors.error
         errorLabel.numberOfLines = 0
