@@ -135,8 +135,13 @@ private struct CardCreationModule: CardCreationModulable {
     let aiProcessingModule: AIProcessingModulable?
     
     func makeCoordinator(navigationController: UINavigationController, sourceType: CardCreationSourceType, editingCard: BusinessCard?) -> Coordinator {
-        // 實際實作會在 Features/CardCreation/CardCreationCoordinator.swift
-        return PlaceholderCoordinator(navigationController: navigationController)
+        // 實際使用真正的 CardCreationCoordinator
+        return CardCreationCoordinator.make(
+            navigationController: navigationController,
+            dependencies: ServiceContainer.shared,
+            sourceType: sourceType,
+            editingCard: editingCard
+        )
     }
 }
 

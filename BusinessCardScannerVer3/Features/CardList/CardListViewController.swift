@@ -34,7 +34,8 @@ class CardListViewController: BaseViewController {
     
     // MARK: - Properties
     
-    private var viewModel: CardListViewModel!
+    // Note: Made internal for testing purposes
+    var viewModel: CardListViewModel!
     
     /// Coordinator 委託 - 用於處理導航
     weak var coordinatorDelegate: CardListCoordinatorDelegate?
@@ -352,5 +353,16 @@ extension UISearchBar {
             .publisher(for: UISearchTextField.textDidChangeNotification, object: self.searchTextField)
             .compactMap { ($0.object as? UISearchTextField)?.text ?? "" }
             .eraseToAnyPublisher()
+    }
+}
+
+// MARK: - Public Methods
+
+extension CardListViewController {
+    
+    /// 從 Repository 重新載入資料（由 AppCoordinator 調用）
+    func refreshDataFromRepository() {
+        print("🔄 CardListViewController: 收到重新載入請求")
+        viewModel.loadCardsFromRepository()
     }
 }

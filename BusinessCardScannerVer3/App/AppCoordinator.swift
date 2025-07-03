@@ -16,7 +16,9 @@ final class AppCoordinator: BaseCoordinator {
     private let window: UIWindow
     private let serviceContainer: ServiceContainer
     private let moduleFactory: ModuleFactory
-    private var tabBarCoordinator: TabBarCoordinator?
+    
+    // MARK: - Child Coordinators (internal for testing)
+    var tabBarCoordinator: TabBarCoordinator?
     
     // MARK: - Initialization
     
@@ -33,8 +35,6 @@ final class AppCoordinator: BaseCoordinator {
     
     /// 啟動應用程式
     override func start() {
-        print("🚀 AppCoordinator: 啟動應用程式")
-        
         // 初始化服務容器
         setupServices()
         
@@ -49,15 +49,11 @@ final class AppCoordinator: BaseCoordinator {
     
     /// 設定服務容器
     private func setupServices() {
-        print("⚙️ AppCoordinator: 初始化服務容器")
-        
         // 設定應用程式使用固定的 Light Mode，避免 Dark Mode 閃爍
         setupAppearance()
         
         // 這裡可以初始化需要在啟動時設定的服務
         // 例如：分析工具、推播通知等
-        
-        print("✅ AppCoordinator: 服務容器初始化完成")
     }
     
     /// 設定應用程式外觀，強制使用 Light Mode
@@ -70,8 +66,6 @@ final class AppCoordinator: BaseCoordinator {
     
     /// 啟動 TabBar 流程
     private func startTabBarFlow() {
-        print("📱 AppCoordinator: 啟動 TabBar 流程")
-        
         // 創建 TabBar 導航控制器
         let tabBarNavigationController = UINavigationController()
         tabBarNavigationController.isNavigationBarHidden = true
@@ -101,8 +95,6 @@ final class AppCoordinator: BaseCoordinator {
         window.backgroundColor = AppTheme.Colors.background
         window.rootViewController = navigationController
         window.makeKeyAndVisible()
-        
-        print("✅ AppCoordinator: 應用程式啟動完成")
     }
 }
 
@@ -115,31 +107,25 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
     ///   - coordinator: TabBar 協調器
     ///   - moduleType: 要顯示的模組類型
     func tabBarCoordinator(_ coordinator: TabBarCoordinator, didRequestModule moduleType: AppModule) {
-        print("📋 AppCoordinator: 處理模組請求 - \(moduleType)")
-        
         switch moduleType {
         case .camera:
             // 處理相機模組請求
             handleCameraModule()
         case .settings:
             // TODO: 未來可能需要特殊的設定模組處理邏輯
-            print("⚙️ AppCoordinator: 設定模組無需特殊處理")
+            break
         }
     }
     
     /// 處理相機模組請求
     private func handleCameraModule() {
-        print("📸 AppCoordinator: 處理相機模組請求")
-        
-        // 取得目前的導航控制器
-        guard let topViewController = getTopViewController(),
-              let navigationController = topViewController.navigationController else {
-            print("❌ AppCoordinator: 無法取得導航控制器")
+        // 取得當前選中 Tab 的導航控制器
+        guard let currentNavigationController = getCurrentTabNavigationController() else {
             return
         }
         
         // 顯示新增名片選項
-        showAddCardOptions(from: navigationController)
+        showAddCardOptions(from: currentNavigationController)
     }
     
     /// 顯示新增名片選項
@@ -148,13 +134,13 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
         
         let actions: [AlertPresenter.AlertAction] = [
             .default("拍照") { [weak self] in
-                self?.presentCameraModule(from: navigationController)
+                self?.presentCardCreationModule(from: navigationController, sourceType: .camera)
             },
             .default("從相簿選擇") { [weak self] in
-                self?.presentPhotoPickerModule(from: navigationController)
+                self?.presentCardCreationModule(from: navigationController, sourceType: .photoLibrary)
             },
             .default("手動輸入") { [weak self] in
-                self?.presentManualInputModule(from: navigationController)
+                self?.presentCardCreationModule(from: navigationController, sourceType: .manual)
             },
             .cancel("取消", nil)
         ]
@@ -165,43 +151,28 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
             actions: actions,
             sourceView: topViewController.view
         )
-        
-        print("✅ AppCoordinator: 顯示新增名片選項")
     }
     
-    /// 呈現相機模組
-    private func presentCameraModule(from navigationController: UINavigationController) {
-        print("📸 AppCoordinator: 啟動相機模組")
+    /// 呈現名片建立模組（統一入口）
+    private func presentCardCreationModule(from navigationController: UINavigationController, sourceType: CardCreationSourceType) {
+        print("📱 AppCoordinator: 呈現名片建立模組，來源類型: \(sourceType)")
         
-        let cameraCoordinator = moduleFactory.makeCameraCoordinator(navigationController: navigationController)
-        cameraCoordinator.moduleOutput = self
-        
-        childCoordinators.append(cameraCoordinator)
-        cameraCoordinator.start()
-    }
-    
-    /// 呈現相簿選擇模組
-    private func presentPhotoPickerModule(from navigationController: UINavigationController) {
-        print("📁 AppCoordinator: 啟動相簿選擇模組")
-        
-        let photoPickerCoordinator = moduleFactory.makePhotoPickerCoordinator(navigationController: navigationController)
-        photoPickerCoordinator.moduleOutput = self
-        
-        childCoordinators.append(photoPickerCoordinator)
-        photoPickerCoordinator.start()
-    }
-    
-    /// 呈現手動輸入模組
-    private func presentManualInputModule(from navigationController: UINavigationController) {
-        print("✏️ AppCoordinator: 啟動手動輸入模組")
-        
-        // TODO: Task 5.1 實作手動輸入模組
-        guard let topViewController = getTopViewController() else { return }
-        
-        AlertPresenter.shared.showMessage(
-            "手動輸入功能將在 Task 5.1 中實作",
-            title: "開發中"
+        // 使用標準模組工廠創建 CardCreation 模組
+        let cardCreationModule = moduleFactory.makeCardCreationModule()
+        let cardCreationCoordinator = cardCreationModule.makeCoordinator(
+            navigationController: navigationController,
+            sourceType: sourceType,
+            editingCard: nil
         )
+        
+        // 設置委託以處理模組輸出
+        if let coordinator = cardCreationCoordinator as? CardCreationCoordinator {
+            coordinator.moduleOutput = self
+        }
+        
+        // 添加到子協調器並啟動
+        childCoordinators.append(cardCreationCoordinator)
+        cardCreationCoordinator.start()
     }
     
     /// 取得目前最上層的視圖控制器
@@ -234,6 +205,29 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
         
         return viewController
     }
+    
+    /// 取得當前選中 Tab 的導航控制器
+    /// - Returns: 當前 Tab 的導航控制器
+    private func getCurrentTabNavigationController() -> UINavigationController? {
+        guard let rootViewController = window.rootViewController as? UINavigationController,
+              let tabBarController = rootViewController.topViewController as? UITabBarController,
+              let selectedViewController = tabBarController.selectedViewController else {
+            return nil
+        }
+        
+        // 如果選中的是導航控制器，直接返回
+        if let navigationController = selectedViewController as? UINavigationController {
+            return navigationController
+        }
+        
+        // 如果選中的不是導航控制器，可能是占位視圖控制器
+        // 在這種情況下，我們使用 CardList Tab 的導航控制器作為預設
+        if let cardListNavigationController = tabBarController.viewControllers?.first as? UINavigationController {
+            return cardListNavigationController
+        }
+        
+        return nil
+    }
 }
 
 // MARK: - AppModule
@@ -251,49 +245,6 @@ protocol TabBarCoordinatorDelegate: AnyObject {
     func tabBarCoordinator(_ coordinator: TabBarCoordinator, didRequestModule moduleType: AppModule)
 }
 
-// MARK: - CameraModuleOutput
-
-extension AppCoordinator: CameraModuleOutput {
-    
-    func cameraDidCaptureImage(_ image: UIImage) {
-        print("✅ AppCoordinator: 收到拍攝的照片")
-        
-        // 執行 OCR 處理
-        processImageWithOCR(image)
-        
-        // 清理協調器
-        cleanupFinishedCoordinators()
-    }
-    
-    func cameraDidCancel() {
-        print("❌ AppCoordinator: 相機拍攝已取消")
-        
-        // 清理協調器
-        cleanupFinishedCoordinators()
-    }
-}
-
-// MARK: - PhotoPickerModuleOutput
-
-extension AppCoordinator: PhotoPickerModuleOutput {
-    
-    func photoPickerDidSelectImage(_ image: UIImage) {
-        print("✅ AppCoordinator: 收到選擇的照片")
-        
-        // 執行 OCR 處理
-        processImageWithOCR(image)
-        
-        // 清理協調器
-        cleanupFinishedCoordinators()
-    }
-    
-    func photoPickerDidCancel() {
-        print("❌ AppCoordinator: 相簿選擇已取消")
-        
-        // 清理協調器
-        cleanupFinishedCoordinators()
-    }
-}
 
 // MARK: - Helper Methods
 
@@ -301,135 +252,59 @@ extension AppCoordinator {
     
     /// 清理已完成的子協調器
     private func cleanupFinishedCoordinators() {
-        // 移除已完成的相機和相簿選擇協調器
+        // 移除已完成的名片建立協調器
         childCoordinators.removeAll { coordinator in
-            return coordinator is CameraCoordinator || coordinator is PhotoPickerCoordinator
+            return coordinator is CardCreationCoordinator
         }
     }
     
-    /// 使用 OCR 處理圖片
-    /// - Parameter image: 要處理的圖片
-    private func processImageWithOCR(_ image: UIImage) {
-        print("🔍 AppCoordinator: 開始 OCR 處理")
+    /// 通知 CardList 重新載入資料
+    private func notifyCardListToRefresh() {
+        print("🔄 AppCoordinator: 通知 CardList 重新載入資料")
         
-        // 顯示處理中提示
-        guard getTopViewController() != nil else { return }
+        // 找到 CardList 的 ViewController 和 ViewModel
+        guard let tabBarController = navigationController.topViewController as? UITabBarController,
+              let cardListNavController = tabBarController.viewControllers?.first as? UINavigationController,
+              let cardListViewController = cardListNavController.topViewController as? CardListViewController else {
+            print("⚠️ AppCoordinator: 無法找到 CardListViewController")
+            return
+        }
         
-        // 使用 AlertPresenter 顯示處理中狀態
+        // 通知 CardList 重新載入
+        cardListViewController.refreshDataFromRepository()
+        print("✅ AppCoordinator: 已通知 CardList 重新載入")
+    }
+}
+
+// MARK: - CardCreationModuleOutput
+
+extension AppCoordinator: CardCreationModuleOutput {
+    
+    func cardCreationDidFinish(with card: BusinessCard) {
+        print("✅ AppCoordinator: 名片建立完成 - \(card.name)")
+        
+        // 通知 CardList 重新載入資料
+        notifyCardListToRefresh()
+        
+        // 清理協調器
+        cleanupFinishedCoordinators()
+        
+        // 顯示成功訊息
         AlertPresenter.shared.showMessage(
-            "正在識別名片內容，請稍候...",
-            title: "處理中"
+            "名片「\(card.name)」已成功保存",
+            title: "保存成功"
         )
-        
-        // 建立 OCR 處理器並執行
-        let ocrProcessor = OCRProcessor()
-        
-        ocrProcessor.processImage(image) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.handleOCRResult(result, originalImage: image)
-            }
-        }
     }
     
-    /// 處理 OCR 結果
-    /// - Parameters:
-    ///   - result: OCR 處理結果
-    ///   - originalImage: 原始圖片
-    private func handleOCRResult(_ result: Result<OCRProcessingResult, OCRError>, originalImage: UIImage) {
-        guard let topViewController = getTopViewController() else { return }
+    func cardCreationDidCancel() {
+        print("❌ AppCoordinator: 名片建立被取消")
         
-        switch result {
-        case .success(let processingResult):
-            print("✅ AppCoordinator: OCR 處理成功")
-            
-            // 顯示識別結果
-            showOCRResult(processingResult)
-            
-        case .failure(let error):
-            print("❌ AppCoordinator: OCR 處理失敗 - \(error.localizedDescription)")
-            
-            // 顯示錯誤訊息
-            AlertPresenter.shared.showMessage(
-                "文字識別失敗：\(error.localizedDescription)\n\n請確保照片清晰且包含文字內容。",
-                title: "識別失敗"
-            )
-        }
+        // 清理協調器
+        cleanupFinishedCoordinators()
     }
     
-    /// 顯示 OCR 識別結果
-    /// - Parameter result: OCR 處理結果
-    private func showOCRResult(_ result: OCRProcessingResult) {
-        guard let topViewController = getTopViewController() else { return }
-        
-        // 建立結果摘要
-        let ocrResult = result.ocrResult
-        let extractedFields = result.extractedFields
-        
-        var message = "📊 識別統計:\n"
-        message += "• 文字長度: \(ocrResult.recognizedText.count) 字元\n"
-        message += "• 信心度: \(String(format: "%.1f", ocrResult.confidence * 100))%\n"
-        message += "• 處理時間: \(String(format: "%.2f", ocrResult.processingTime)) 秒\n\n"
-        
-        message += "🏷️ 提取欄位 (\(extractedFields.count) 個):\n"
-        
-        if let name = extractedFields["name"] {
-            message += "• 姓名: \(name)\n"
-        }
-        if let company = extractedFields["company"] {
-            message += "• 公司: \(company)\n"
-        }
-        if let title = extractedFields["title"] {
-            message += "• 職位: \(title)\n"
-        }
-        if let phone = extractedFields["phone"] {
-            message += "• 電話: \(phone)\n"
-        }
-        if let email = extractedFields["email"] {
-            message += "• 郵件: \(email)\n"
-        }
-        if let website = extractedFields["website"] {
-            message += "• 網站: \(website)\n"
-        }
-        if let address = extractedFields["address"] {
-            message += "• 地址: \(address)\n"
-        }
-        
-        if extractedFields.isEmpty {
-            message += "• 未自動識別到特定欄位\n"
-        }
-        
-        message += "\n📝 原始識別文字:\n"
-        message += result.preprocessedText.prefix(200)
-        if result.preprocessedText.count > 200 {
-            message += "..."
-        }
-        
-        // 顯示結果 Alert
-        let alert = UIAlertController(
-            title: "✅ 識別完成",
-            message: message,
-            preferredStyle: .alert
-        )
-        
-        // 保存按鈕 (未來實作)
-        alert.addAction(UIAlertAction(title: "保存名片", style: .default) { _ in
-            // TODO: Task 5.1 實作保存功能
-            AlertPresenter.shared.showMessage(
-                "保存功能將在後續任務中實作",
-                title: "開發中"
-            )
-        })
-        
-        // 重新拍攝按鈕
-        alert.addAction(UIAlertAction(title: "重新拍攝", style: .default) { [weak self] _ in
-            self?.handleCameraModule()
-        })
-        
-        // 關閉按鈕
-        alert.addAction(UIAlertAction(title: "關閉", style: .cancel))
-        
-        topViewController.present(alert, animated: true)
-        
-        print("📋 AppCoordinator: OCR 結果已顯示")
+    func cardCreationRequestsContinue() {
+        print("🔄 AppCoordinator: 收到繼續請求")
+        // 這個方法可能在未來用於特殊的繼續流程，目前暫不需要實作
     }
 }

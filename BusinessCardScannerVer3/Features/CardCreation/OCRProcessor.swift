@@ -327,8 +327,12 @@ class OCRProcessor {
         let text = ocrResult.recognizedText
         var extractedFields: [String: String] = [:]
         
-        // 提取電話號碼
-        extractedFields["phone"] = extractPhoneNumbers(from: text).first
+        // 分別提取市內電話和手機號碼
+        let phoneNumbers = extractPhoneNumbers(from: text)
+        let (landlinePhone, mobilePhone) = separatePhoneNumbers(phoneNumbers)
+        
+        extractedFields["phone"] = landlinePhone
+        extractedFields["mobile"] = mobilePhone
         
         // 提取電子郵件
         extractedFields["email"] = extractEmails(from: text).first
@@ -357,15 +361,43 @@ class OCRProcessor {
     /// - Parameter text: 文字內容
     /// - Returns: 電話號碼陣列
     private func extractPhoneNumbers(from text: String) -> [String] {
+        // 改進的台灣電話號碼模式
         let phonePatterns = [
-            "\\+?886[\\s\\-]?\\d[\\s\\-]?\\d{4}[\\s\\-]?\\d{4}",  // 台灣手機
-            "\\+?886[\\s\\-]?\\d{1,2}[\\s\\-]?\\d{4}[\\s\\-]?\\d{4}", // 台灣市話
-            "\\d{4}[\\s\\-]?\\d{4}",                              // 簡化格式
-            "\\d{2,3}[\\s\\-]?\\d{4}[\\s\\-]?\\d{4}",            // 一般格式
-            "\\(\\d{2,3}\\)[\\s\\-]?\\d{4}[\\s\\-]?\\d{4}"      // 括號格式
+            // 手機號碼模式
+            "09\\d{2}[\\s\\-]?\\d{3}[\\s\\-]?\\d{3}",           // 09xx-xxx-xxx
+            "\\+?886[\\s\\-]?9\\d{2}[\\s\\-]?\\d{3}[\\s\\-]?\\d{3}", // +886-9xx-xxx-xxx
+            
+            // 市內電話模式
+            "\\(?0[2-8]\\)?[\\s\\-]?\\d{3,4}[\\s\\-]?\\d{4}",    // (0x)xxxx-xxxx
+            "\\+?886[\\s\\-]?[2-8][\\s\\-]?\\d{3,4}[\\s\\-]?\\d{4}", // +886-x-xxxx-xxxx
+            
+            // 簡化格式（更寬鬆）
+            "\\d{8,10}",                                       // 純數字8-10位
+            "\\d{2,4}[\\s\\-]\\d{4}[\\s\\-]?\\d{4}?",           // 2-4位區碼格式
+            "\\(\\d{2,4}\\)[\\s\\-]?\\d{4}[\\s\\-]?\\d{4}?"     // 括號格式
         ]
         
-        return extractWithPatterns(from: text, patterns: phonePatterns)
+        var results = extractWithPatterns(from: text, patterns: phonePatterns)
+        
+        // 從關鍵字後提取電話號碼
+        let phoneKeywords = ["電話", "Tel", "Phone", "手機", "Mobile", "Cell"]
+        for keyword in phoneKeywords {
+            if let regex = try? NSRegularExpression(pattern: "\\b\(keyword)[：:﹕︰]?\\s*([\\d\\s\\-\\(\\)\\+]{8,15})", options: .caseInsensitive) {
+                let matches = regex.matches(in: text, options: [], range: NSRange(text.startIndex..., in: text))
+                for match in matches {
+                    if match.numberOfRanges > 1, let range = Range(match.range(at: 1), in: text) {
+                        let phone = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !phone.isEmpty {
+                            results.append(phone)
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 去重並清理
+        let uniqueResults = Array(Set(results))
+        return uniqueResults.map { cleanPhoneNumber($0) }.filter { !$0.isEmpty }
     }
     
     /// 提取電子郵件
@@ -387,6 +419,59 @@ class OCRProcessor {
         ]
         
         return extractWithPatterns(from: text, patterns: websitePatterns)
+    }
+    
+    /// 分離市內電話和手機號碼
+    /// - Parameter phoneNumbers: 電話號碼陣列
+    /// - Returns: (市內電話, 手機號碼)
+    private func separatePhoneNumbers(_ phoneNumbers: [String]) -> (String?, String?) {
+        var landlinePhone: String? = nil
+        var mobilePhone: String? = nil
+        
+        for phone in phoneNumbers {
+            let cleanPhone = phone.replacingOccurrences(of: "[^\\d+]", with: "", options: .regularExpression)
+            
+            // 判斷是否為手機號碼
+            if cleanPhone.hasPrefix("09") || cleanPhone.hasPrefix("+8869") || cleanPhone.hasPrefix("8869") {
+                if mobilePhone == nil {
+                    mobilePhone = phone
+                }
+            } else {
+                // 判斷是否為市內電話
+                if (cleanPhone.hasPrefix("02") || cleanPhone.hasPrefix("03") || cleanPhone.hasPrefix("04") || 
+                    cleanPhone.hasPrefix("05") || cleanPhone.hasPrefix("06") || cleanPhone.hasPrefix("07") || 
+                    cleanPhone.hasPrefix("08") || cleanPhone.hasPrefix("+8862") || cleanPhone.hasPrefix("+8863") ||
+                    cleanPhone.hasPrefix("+8864") || cleanPhone.hasPrefix("+8865") || cleanPhone.hasPrefix("+8866") ||
+                    cleanPhone.hasPrefix("+8867") || cleanPhone.hasPrefix("+8868")) {
+                    if landlinePhone == nil {
+                        landlinePhone = phone
+                    }
+                } else if cleanPhone.count >= 8 && cleanPhone.count <= 10 && !cleanPhone.hasPrefix("09") {
+                    // 其他可能的市內電話格式
+                    if landlinePhone == nil {
+                        landlinePhone = phone
+                    }
+                }
+            }
+        }
+        
+        return (landlinePhone, mobilePhone)
+    }
+    
+    /// 清理電話號碼格式
+    /// - Parameter phone: 原始電話號碼
+    /// - Returns: 清理後的電話號碼
+    private func cleanPhoneNumber(_ phone: String) -> String {
+        // 移除多餘的空格和符號
+        var cleaned = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 移除重複的連字符
+        cleaned = cleaned.replacingOccurrences(of: "--+", with: "-", options: .regularExpression)
+        
+        // 移除多餘的空格
+        cleaned = cleaned.replacingOccurrences(of: " +", with: " ", options: .regularExpression)
+        
+        return cleaned
     }
     
     /// 使用正則表達式提取
@@ -469,40 +554,65 @@ class OCRProcessor {
     /// - Parameter ocrResult: OCR 結果
     /// - Returns: 人名
     private func extractPersonName(from ocrResult: OCRResult) -> String? {
-        // 通常人名在名片的上方區域，且相對較短
-        let upperRegion = CGRect(x: 0, y: 0.6, width: 1.0, height: 0.4)
+        // 調整人名區域：通常在名片的上方區域，擴大範圍以包含更多候選
+        let upperRegion = CGRect(x: 0, y: 0.5, width: 1.0, height: 0.5)
         let upperTexts = visionService.extractTextInRegion(ocrResult.boundingBoxes, region: upperRegion)
+        
+        print("🔍 OCRProcessor: 在上方區域找到 \(upperTexts.count) 個文字候選: \(upperTexts)")
         
         // 中文人名特徵：2-4個中文字元，不包含數字和符號
         let chineseNamePattern = "^[\\u4e00-\\u9fff]{2,4}$"
         
-        // 英文人名特徵：2-20個英文字母和空格
-        let englishNamePattern = "^[a-zA-Z\\s]{2,20}$"
+        // 英文人名特徵：改進模式，支援 "First Last" 格式
+        let englishNamePattern = "^[A-Za-z]+\\s+[A-Za-z]+$"
         
-        // 優先尋找中文人名
+        // 首先尋找英文人名（因為問題是 "Kevin Su"）
         for text in upperTexts {
-            if text.range(of: chineseNamePattern, options: .regularExpression) != nil {
-                print("🏷️ 發現中文人名候選: \(text)")
-                return text
+            let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedText.range(of: englishNamePattern, options: .regularExpression) != nil &&
+               !trimmedText.contains("@") && 
+               !trimmedText.contains("www") && 
+               !trimmedText.contains(".com") &&
+               !trimmedText.localizedCaseInsensitiveContains("company") &&
+               !trimmedText.localizedCaseInsensitiveContains("ltd") &&
+               !trimmedText.localizedCaseInsensitiveContains("inc") {
+                print("🏷️ 發現英文人名候選: \(trimmedText)")
+                return trimmedText
             }
         }
         
-        // 再尋找英文人名
+        // 再尋找中文人名
         for text in upperTexts {
-            if text.range(of: englishNamePattern, options: .regularExpression) != nil &&
-               !text.contains("@") && !text.contains("www") && !text.contains(".com") {
-                print("🏷️ 發現英文人名候選: \(text)")
-                return text
+            let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedText.range(of: chineseNamePattern, options: .regularExpression) != nil {
+                print("🏷️ 發現中文人名候選: \(trimmedText)")
+                return trimmedText
             }
         }
         
-        // 如果沒有找到符合模式的，使用原來的邏輯
-        let nameCandidate = upperTexts.first { text in
-            let length = text.count
-            return length >= 2 && length <= 10 && !text.contains("@") && !text.contains("www")
+        // 如果沒有找到符合嚴格模式的，使用寬鬆邏輯
+        // 但排除明顯的公司名稱和聯絡資訊
+        let excludeKeywords = ["@", "www", ".com", "公司", "企業", "Ltd", "Inc", "Corp", "Company", "Technology", "Tech"]
+        
+        for text in upperTexts {
+            let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let length = trimmedText.count
+            
+            // 長度適中且不包含排除關鍵字
+            if length >= 2 && length <= 15 {
+                let containsExcludeKeyword = excludeKeywords.contains { keyword in
+                    trimmedText.localizedCaseInsensitiveContains(keyword)
+                }
+                
+                if !containsExcludeKeyword {
+                    print("🏷️ 寬鬆模式找到人名候選: \(trimmedText)")
+                    return trimmedText
+                }
+            }
         }
         
-        return nameCandidate
+        print("⚠️ OCRProcessor: 未找到合適的人名候選")
+        return nil
     }
     
     /// 提取職位

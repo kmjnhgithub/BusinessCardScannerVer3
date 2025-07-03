@@ -92,10 +92,14 @@ final class PhotoPickerCoordinator: BaseCoordinator {
         finish()
     }
     
-    private func dismissPicker() {
-        guard let picker = pickerViewController else { return }
+    private func dismissPicker(completion: (() -> Void)? = nil) {
+        guard let picker = pickerViewController else { 
+            completion?()
+            return 
+        }
         
         picker.dismiss(animated: true) { [weak self] in
+            completion?()
             self?.finish()
         }
     }
@@ -109,8 +113,10 @@ extension PhotoPickerCoordinator: PHPickerViewControllerDelegate {
         
         guard let result = results.first else {
             print("❌ PhotoPickerCoordinator: 用戶取消選擇")
-            moduleOutput?.photoPickerDidCancel()
-            dismissPicker()
+            dismissPicker { [weak self] in
+                print("📱 PhotoPickerCoordinator: dismiss 完成，通知取消")
+                self?.moduleOutput?.photoPickerDidCancel()
+            }
             return
         }
         
@@ -119,25 +125,35 @@ extension PhotoPickerCoordinator: PHPickerViewControllerDelegate {
             DispatchQueue.main.async {
                 if let error = error {
                     print("❌ PhotoPickerCoordinator: 圖片載入失敗 - \(error.localizedDescription)")
-                    self?.moduleOutput?.photoPickerDidCancel()
-                    self?.dismissPicker()
+                    self?.dismissPicker { [weak self] in
+                        print("📱 PhotoPickerCoordinator: dismiss 完成，通知載入失敗")
+                        self?.moduleOutput?.photoPickerDidCancel()
+                    }
                     return
                 }
                 
                 guard let image = object as? UIImage else {
                     print("❌ PhotoPickerCoordinator: 無法轉換為 UIImage")
-                    self?.moduleOutput?.photoPickerDidCancel()
-                    self?.dismissPicker()
+                    self?.dismissPicker { [weak self] in
+                        print("📱 PhotoPickerCoordinator: dismiss 完成，通知轉換失敗")
+                        self?.moduleOutput?.photoPickerDidCancel()
+                    }
                     return
                 }
                 
                 print("✅ PhotoPickerCoordinator: 成功選擇圖片")
                 
-                // 通知模組輸出
-                self?.moduleOutput?.photoPickerDidSelectImage(image)
-                
-                // 關閉選擇器
-                self?.dismissPicker()
+                // 先關閉選擇器，在 dismiss 完成後再通知模組輸出
+                self?.dismissPicker { [weak self] in
+                    print("📱 PhotoPickerCoordinator: dismiss 完成，準備通知模組輸出")
+                    print("📱 PhotoPickerCoordinator: moduleOutput 是否存在: \(self?.moduleOutput != nil)")
+                    if let moduleOutput = self?.moduleOutput {
+                        print("📱 PhotoPickerCoordinator: 呼叫 photoPickerDidSelectImage")
+                        moduleOutput.photoPickerDidSelectImage(image)
+                    } else {
+                        print("❌ PhotoPickerCoordinator: moduleOutput 為 nil，無法通知")
+                    }
+                }
             }
         }
     }

@@ -22,6 +22,7 @@ final class CardListCoordinator: BaseCoordinator {
     private let moduleFactory: ModuleFactory
     private var viewModel: CardListViewModel?
     private var viewController: CardListViewController?
+    private var cardCreationCoordinator: CardCreationCoordinator?
     
     // MARK: - Module Output
     
@@ -76,9 +77,20 @@ final class CardListCoordinator: BaseCoordinator {
     
     /// 導航到名片詳情
     private func showCardDetail(_ card: BusinessCard) {
-        // TODO: Task 7.1 實作詳情頁導航
-        print("🔍 導航到名片詳情: \(card.name)")
-        moduleOutput?.cardListDidSelectCard(card)
+        print("🔍 導航到名片編輯: \(card.name)")
+        
+        // 建立 CardCreationCoordinator 用於編輯現有名片
+        let serviceContainer = ServiceContainer.shared
+        cardCreationCoordinator = CardCreationCoordinator(
+            navigationController: navigationController,
+            dependencies: serviceContainer,
+            sourceType: .manual, // 編輯現有名片使用手動輸入類型
+            editingCard: card
+        )
+        cardCreationCoordinator?.moduleOutput = self
+        
+        // 顯示編輯現有名片表單
+        cardCreationCoordinator?.showEditForm(for: card)
     }
     
     /// 顯示新增名片選項
@@ -216,12 +228,41 @@ extension CardListCoordinator: CardListCoordinatorDelegate {
     }
     
     func cardListDidRequestEdit(_ card: BusinessCard) {
-        // TODO: Task 3.4 實作編輯功能
         print("✏️ 編輯名片: \(card.name)")
-        // 暫時顯示提示
+        // 直接呼叫編輯導航
+        showCardDetail(card)
+    }
+}
+
+// MARK: - CardCreationModuleOutput
+
+extension CardListCoordinator: CardCreationModuleOutput {
+    
+    func cardCreationDidFinish(with card: BusinessCard) {
+        print("✅ CardListCoordinator: 名片保存成功 - \(card.name)")
+        
+        // 清理 Coordinator
+        cardCreationCoordinator = nil
+        
+        // 重新載入列表資料
+        viewModel?.loadCards()
+        
+        // 顯示成功訊息
         AlertPresenter.shared.showMessage(
-            "編輯功能將在 Task 3.4 中實作",
-            title: "開發中"
+            "名片「\(card.name)」已成功更新",
+            title: "保存成功"
         )
+    }
+    
+    func cardCreationDidCancel() {
+        print("❌ CardListCoordinator: 使用者取消編輯")
+        
+        // 清理 Coordinator
+        cardCreationCoordinator = nil
+    }
+    
+    func cardCreationRequestsContinue() {
+        print("🔄 CardListCoordinator: 名片建立流程繼續")
+        // 暫不實作
     }
 }

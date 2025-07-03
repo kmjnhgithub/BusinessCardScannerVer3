@@ -67,28 +67,15 @@ class VisionService {
         let supportedLanguages = try? VNRecognizeTextRequest.supportedRecognitionLanguages(for: .accurate, revision: VNRecognizeTextRequestRevision1)
         print("🌍 VisionService: 系統支援的語言: \(supportedLanguages ?? [])")
         
-        // 優先設定中文識別
-        let desiredLanguages = ["zh-Hant", "zh-Hans", "en-US"]
-        var availableLanguages: [String] = []
-        
-        if let supported = supportedLanguages {
-            for lang in desiredLanguages {
-                if supported.contains(lang) {
-                    availableLanguages.append(lang)
-                    print("✅ 語言支援: \(lang)")
-                } else {
-                    print("❌ 語言不支援: \(lang)")
-                }
-            }
-        }
-        
-        // 如果沒有找到支援的語言，使用預設設定
-        if availableLanguages.isEmpty {
-            print("⚠️ 使用預設語言設定")
-            request.recognitionLanguages = ["en-US"]
+        // 修正：使用 Ver2 的條件式語言設定邏輯
+        if #available(iOS 16.0, *) {
+            // iOS 16+ 支援更多語言
+            request.recognitionLanguages = ["zh-Hant", "en-US"] // 繁體中文和英文
+            print("🎯 iOS 16+ 使用語言: [\"zh-Hant\", \"en-US\"]")
         } else {
-            request.recognitionLanguages = availableLanguages
-            print("🎯 使用語言: \(availableLanguages)")
+            // iOS 15 及以下版本使用英文
+            request.recognitionLanguages = ["en-US"]
+            print("🎯 iOS 15- 使用語言: [\"en-US\"]")
         }
         
         // 使用語言校正
@@ -112,7 +99,9 @@ class VisionService {
     func recognizeText(from image: UIImage, completion: @escaping (Result<OCRResult, OCRError>) -> Void) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
-        guard let cgImage = image.cgImage else {
+        // 先正規化圖片方向（參考 Ver2）
+        guard let normalizedImage = image.normalizeOrientation(),
+              let cgImage = normalizedImage.cgImage else {
             completion(.failure(.invalidImage))
             return
         }
@@ -122,7 +111,8 @@ class VisionService {
             guard let self = self else { return }
             
             let request = self.textRecognitionRequest
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            // 使用正規化後的圖片，方向為 .up
+            let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
             
             do {
                 try handler.perform([request])
@@ -264,6 +254,23 @@ class VisionService {
         } else {
             return false
         }
+    }
+}
+
+// MARK: - UIImage Extension (參考 Ver2)
+extension UIImage {
+    /// 正規化圖片方向
+    func normalizeOrientation() -> UIImage? {
+        if imageOrientation == .up {
+            return self
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        draw(in: CGRect(origin: .zero, size: size))
+        let normalizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return normalizedImage
     }
 }
 

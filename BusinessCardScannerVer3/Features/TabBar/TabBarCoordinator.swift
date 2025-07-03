@@ -20,6 +20,10 @@ final class TabBarCoordinator: BaseCoordinator {
     /// TabBar 協調器代理
     weak var delegate: TabBarCoordinatorDelegate?
     
+    // MARK: - Child Coordinators (internal for testing)
+    var cardListCoordinator: CardListCoordinator?
+    // Note: settingsCoordinator not implemented yet (placeholder used)
+    
     // MARK: - Types
     
     /// Tab 索引枚舉
@@ -133,6 +137,9 @@ final class TabBarCoordinator: BaseCoordinator {
         
         // 將協調器添加到子協調器中管理生命週期
         addChild(coordinator)
+        
+        // 儲存協調器引用供測試使用
+        cardListCoordinator = coordinator
         
         // 設定 Tab Bar Item
         setupTabBarItem(for: navigationController, tabIndex: .cardList)

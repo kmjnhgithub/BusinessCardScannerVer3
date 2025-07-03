@@ -115,18 +115,32 @@ extension BusinessCardEntity {
             }
         }
         
-        // 電話號碼格式驗證（如果有填寫）
+        // 電話號碼格式驗證（如果有填寫，支援分機號碼）
         if let phone = phone, !phone.isEmpty {
-            let cleanPhone = phone.replacingOccurrences(of: "[^0-9+]", with: "", options: .regularExpression)
-            guard cleanPhone.count >= 8 && cleanPhone.count <= 15 else {
+            // 分離主號碼和分機號碼進行驗證
+            let components = phone.components(separatedBy: "#")
+            let mainPhone = components.first ?? phone
+            let cleanMainPhone = mainPhone.replacingOccurrences(of: "[^0-9+]", with: "", options: .regularExpression)
+            
+            // 驗證主號碼長度
+            guard cleanMainPhone.count >= 8 && cleanMainPhone.count <= 20 else {
                 throw ValidationError.invalidFormat("電話號碼格式不正確")
+            }
+            
+            // 如果有分機號碼，驗證分機號碼
+            if components.count > 1 {
+                let extensionNumber = components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleanExtension = extensionNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+                guard cleanExtension.count >= 1 && cleanExtension.count <= 6 else {
+                    throw ValidationError.invalidFormat("分機號碼格式不正確")
+                }
             }
         }
         
         // 手機號碼格式驗證（如果有填寫）
         if let mobile = mobile, !mobile.isEmpty {
             let cleanMobile = mobile.replacingOccurrences(of: "[^0-9+]", with: "", options: .regularExpression)
-            guard cleanMobile.count >= 8 && cleanMobile.count <= 15 else {
+            guard cleanMobile.count >= 8 && cleanMobile.count <= 20 else {  // 放寬長度限制支援國際格式
                 throw ValidationError.invalidFormat("手機號碼格式不正確")
             }
         }

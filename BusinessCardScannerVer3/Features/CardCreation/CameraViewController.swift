@@ -14,6 +14,7 @@ import SnapKit
 protocol CameraViewControllerDelegate: AnyObject {
     func cameraViewController(_ controller: CameraViewController, didCaptureImage image: UIImage)
     func cameraViewControllerDidCancel(_ controller: CameraViewController)
+    func cameraViewControllerDidRequestGallery(_ controller: CameraViewController)
 }
 
 /// 相機拍攝視圖控制器
@@ -354,7 +355,12 @@ class CameraViewController: BaseViewController {
     @objc private func galleryButtonTapped() {
         // 切換到相簿選擇
         print("📁 切換到相簿選擇")
-        // TODO: Task 4.3 - 實作PhotoPicker切換
+        
+        // 停止相機會話
+        stopCameraSession()
+        
+        // 通知 delegate 請求切換到相簿選擇
+        delegate?.cameraViewControllerDidRequestGallery(self)
     }
     
     @objc private func captureButtonTouchDown() {

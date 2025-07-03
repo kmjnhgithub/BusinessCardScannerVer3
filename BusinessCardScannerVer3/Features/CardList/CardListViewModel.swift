@@ -29,6 +29,7 @@ class CardListViewModel: BaseViewModel {
     // MARK: - Private Properties
     
     private let repository: BusinessCardRepository
+    private var shouldLoadMockDataOnEmpty: Bool = true
     
     // MARK: - Initialization
     
@@ -36,8 +37,8 @@ class CardListViewModel: BaseViewModel {
         self.repository = repository
         super.init()
         
-        generateMockData() // Task 3.1 測試用假資料
         setupBindings()
+        loadCardsFromRepository() // 載入真實資料
     }
     
     // MARK: - Setup
@@ -61,16 +62,43 @@ class CardListViewModel: BaseViewModel {
     
     // MARK: - Public Methods
     
-    /// 載入名片資料
+    /// 載入名片資料（從資料庫）
     func loadCards() {
+        loadCardsFromRepository()
+    }
+    
+    /// 從 Repository 載入名片資料
+    func loadCardsFromRepository() {
         isLoading = true
         
-        // TODO: Task 3.2 實作真實的資料庫載入
-        // 目前使用假資料，延遲模擬網路請求
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.generateMockData()
-            self?.isLoading = false
-        }
+        repository.fetchAll()
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    DispatchQueue.main.async {
+                        self?.isLoading = false
+                        if case .failure(let error) = completion {
+                            print("❌ 載入名片失敗: \(error.localizedDescription)")
+                            // 如果資料庫載入失敗，載入假資料以避免空白畫面
+                            self?.generateMockData()
+                        }
+                    }
+                },
+                receiveValue: { [weak self] cards in
+                    DispatchQueue.main.async {
+                        self?.cards = cards
+                        print("✅ 已從 Repository 載入 \(cards.count) 筆名片資料")
+                        
+                        // 修復：只有在首次載入且資料庫真正為空時才載入 mock 資料
+                        // 這樣可以避免覆蓋用戶新增的資料
+                        if cards.isEmpty && self?.shouldLoadMockDataOnEmpty == true {
+                            print("📝 資料庫為空，載入展示用假資料")
+                            self?.generateMockData()
+                            self?.shouldLoadMockDataOnEmpty = false // 防止重複載入
+                        }
+                    }
+                }
+            )
+            .store(in: &cancellables)
     }
     
     /// 更新搜尋文字
@@ -109,16 +137,11 @@ class CardListViewModel: BaseViewModel {
     
     /// 重新載入資料（用於下拉刷新）
     func reloadData() {
-        isLoading = true
+        print("🔄 執行下拉刷新重新載入資料")
         
-        // TODO: Task 3.3 - 整合真實的資料庫重新載入
-        // 目前重新生成測試資料模擬刷新
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.generateMockData()
-            self?.isLoading = false
-            
-            print("✅ 資料重新載入完成")
-        }
+        // 修復：下拉刷新應該重新從資料庫載入，而不是生成 mock 資料
+        // 這樣可以確保顯示用戶最新儲存的資料
+        loadCardsFromRepository()
     }
     
     /// 處理新增名片請求

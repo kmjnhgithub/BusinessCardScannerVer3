@@ -10,14 +10,17 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-    private var appCoordinator: AppCoordinator?
+    
+    // MARK: - App Coordinator
+    // Note: Made internal for testing purposes
+    var appCoordinator: AppCoordinator?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         window = UIWindow(windowScene: windowScene)
         
-        // Phase 2: 使用 AppCoordinator 啟動應用程式
+        // 使用 AppCoordinator 啟動應用程式
         setupAppCoordinator()
         
         // 開發驗證測試 - 只在 DEBUG 模式下執行
@@ -45,25 +48,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func setupAppCoordinator() {
         guard let window = window else { return }
         
-        print("🚀 SceneDelegate: 設定 AppCoordinator")
-        
         // 創建 AppCoordinator
         let coordinator = AppCoordinator(window: window)
         self.appCoordinator = coordinator
         
         // 啟動應用程式
         coordinator.start()
-        
-        print("✅ SceneDelegate: AppCoordinator 設定完成")
     }
     
     /// 執行開發驗證測試 - 統一管理所有驗證測試
     private func runDevelopmentVerificationTests() {
-        // 設定：是否啟用驗證測試
-        let enableVerificationTests = true
+        // 設定：是否啟用驗證測試 - 正式使用時設為 false
+        let enableVerificationTests = false
         
         guard enableVerificationTests else {
-            print("驗證測試已停用")
+            print("✅ 正式使用模式：所有驗證測試已停用")
             return
         }
         
@@ -85,7 +84,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
         
-        // Phase 2 驗證測試
+        // Phase 2 驗證測試 - 已禁用（測試檔案不存在）
+        /*
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             Task21VerificationTest.setupTestScene(in: self.window)
         }
@@ -109,14 +109,47 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             Task42VerificationTest.run()
         }
+        */
     }
     
     /// 執行正在開發功能的驗證測試
     private func runActiveFeatureTests() {
-        // Task 4.3 驗證測試 - 正在開發中
+        // Phase 5 Integration Test - 暫時禁用
+        #if DEBUG_DISABLED
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            // Task43VerificationTest.run() // 當Task 4.3完成時啟用
+            Task5IntegrationTest.run()
         }
+        #endif
+        
+        // 視圖層次結構檢測 - 已禁用（測試檔案不存在）
+        /*
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            ViewHierarchyTest.debugViewHierarchy()
+            ViewHierarchyTest.testCoordinatorAccess()
+        }
+        
+        // TabBar 攔截功能測試
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            TabBarInterceptTest.testTabBarInterception()
+        }
+        
+        
+        // 業務流程整合測試
+        let runBusinessFlowTests = true  // 設為 true 來執行業務流程測試
+        
+        if runBusinessFlowTests {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                print("\n🚀 開始執行業務流程整合測試...")
+                BusinessFlowIntegrationTest.runAllTests()
+            }
+            
+            // 端到端完整流程驗證
+            DispatchQueue.main.asyncAfter(deadline: .now() + 12.0) {
+                EndToEndFlowTest.runCompleteFlowTest()
+                EndToEndFlowTest.showFlowStatusSummary()
+            }
+        }
+        */
         
         print("✅ 活躍功能驗證測試已設定")
     }

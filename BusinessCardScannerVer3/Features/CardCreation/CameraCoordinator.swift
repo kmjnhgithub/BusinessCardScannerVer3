@@ -93,6 +93,14 @@ extension CameraCoordinator: CameraViewControllerDelegate {
         // 關閉相機
         dismissCamera()
     }
+    
+    func cameraViewControllerDidRequestGallery(_ controller: CameraViewController) {
+        print("📁 CameraCoordinator: 用戶請求切換到相簿")
+        
+        // 關閉相機並通知取消（讓上層處理相簿選擇）
+        moduleOutput?.cameraDidCancel()
+        dismissCamera()
+    }
 }
 
 // MARK: - Module Factory Extension
