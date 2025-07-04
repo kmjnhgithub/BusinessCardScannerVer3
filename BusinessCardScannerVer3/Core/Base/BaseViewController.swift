@@ -129,31 +129,47 @@ class BaseViewController: UIViewController {
     
     // MARK: - Keyboard Handling
     
-    /// 註冊鍵盤事件監聽
+    /// 當前鍵盤高度
+    private(set) var keyboardHeight: CGFloat = 0
+    
+    /// 註冊鍵盤事件監聽（遵循 UI 設計規範 v1.0）
     func registerKeyboardObservers() {
         NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
-            .compactMap { notification in
-                notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+            .compactMap { notification -> (CGFloat, Double)? in
+                guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+                      let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else {
+                    return nil
+                }
+                return (keyboardFrame.height, duration)
             }
-            .sink { [weak self] keyboardFrame in
-                self?.keyboardWillShow(height: keyboardFrame.height)
+            .sink { [weak self] height, duration in
+                self?.keyboardHeight = height
+                self?.keyboardWillShow(height: height, duration: duration)
             }
             .store(in: &cancellables)
         
         NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
-            .sink { [weak self] _ in
-                self?.keyboardWillHide()
+            .compactMap { notification -> Double? in
+                notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double
+            }
+            .sink { [weak self] duration in
+                self?.keyboardHeight = 0
+                self?.keyboardWillHide(duration: duration)
             }
             .store(in: &cancellables)
     }
     
     /// 鍵盤將顯示（子類別可覆寫）
-    func keyboardWillShow(height: CGFloat) {
+    /// - Parameters:
+    ///   - height: 鍵盤高度
+    ///   - duration: 動畫時長（遵循系統時長）
+    @objc func keyboardWillShow(height: CGFloat, duration: Double) {
         // 子類別覆寫以處理鍵盤顯示
     }
     
     /// 鍵盤將隱藏（子類別可覆寫）
-    func keyboardWillHide() {
+    /// - Parameter duration: 動畫時長（遵循系統時長）
+    @objc func keyboardWillHide(duration: Double) {
         // 子類別覆寫以處理鍵盤隱藏
     }
     

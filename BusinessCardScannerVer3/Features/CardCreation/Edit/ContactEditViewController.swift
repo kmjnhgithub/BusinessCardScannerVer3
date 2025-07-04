@@ -72,6 +72,9 @@ class ContactEditViewController: BaseViewController {
         setupView()
         setupNavigationBar()
         bindViewModel()
+        
+        // 註冊鍵盤事件監聽（修復鍵盤遮擋問題）
+        registerKeyboardObservers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -248,8 +251,8 @@ class ContactEditViewController: BaseViewController {
     }
     
     private func setupKeyboardDismiss() {
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapToDismissKeyboard))
-        view.addGestureRecognizer(tapGesture)
+        // 使用 BaseViewController 的統一手勢處理
+        setupDismissKeyboardGesture()
     }
     
     // MARK: - ViewModel Binding
@@ -290,6 +293,9 @@ class ContactEditViewController: BaseViewController {
         
         // Return key navigation
         setupReturnKeyNavigation()
+        
+        // 設置欄位焦點監聽（點擊立即滾動）
+        setupFieldFocusTracking()
         
         // Output bindings
         viewModel.$cardData
@@ -378,6 +384,53 @@ class ContactEditViewController: BaseViewController {
         
         // 地址欄位沒有 returnPublisher，所以手動處理焦點跳轉
         // 從手機欄位（index 5）跳到地址欄位的邏輯已在上面處理
+    }
+    
+    /// 設置欄位焦點變化監聽（點擊立即滾動）
+    private func setupFieldFocusTracking() {
+        let allFields = [
+            nameField, jobTitleField, companyField,
+            emailField, phoneField, mobileField,
+            addressField, websiteField
+        ]
+        
+        // 監聽每個欄位的開始編輯事件（使用 FormFieldView 的 beginEditingPublisher）
+        for field in allFields {
+            field.beginEditingPublisher
+                .sink { [weak self] _ in
+                    guard let self = self else { return }
+                    
+                    // 立即滾動到該欄位（不等鍵盤）
+                    self.scrollToFieldImmediately(field)
+                }
+                .store(in: &cancellables)
+        }
+    }
+    
+    /// 立即滾動到指定欄位（使用預估鍵盤高度）
+    private func scrollToFieldImmediately(_ field: FormFieldView) {
+        // 使用預估的鍵盤高度（iPhone 標準鍵盤約 291pt）
+        let estimatedKeyboardHeight: CGFloat = 291
+        
+        // 計算欄位在 scrollView 中的位置
+        let fieldFrame = contentView.convert(field.frame, to: scrollView)
+        let visibleHeight = scrollView.frame.height - estimatedKeyboardHeight
+        
+        // 使用 UI 規範的標準間距作為安全邊距
+        let fieldBottom = fieldFrame.maxY + AppTheme.Layout.standardPadding
+        
+        // 只在欄位會被遮擋時才滾動
+        if fieldBottom > visibleHeight {
+            let scrollPoint = CGPoint(x: 0, y: fieldBottom - visibleHeight + scrollView.contentOffset.y)
+            
+            // 使用短動畫時長提供即時響應
+            UIView.animate(withDuration: 0.25, 
+                          delay: 0, 
+                          options: .curveEaseOut, // 快速響應使用 easeOut
+                          animations: {
+                self.scrollView.setContentOffset(scrollPoint, animated: false)
+            })
+        }
     }
     
     // MARK: - UI Updates
@@ -635,9 +688,6 @@ class ContactEditViewController: BaseViewController {
         present(alertController, animated: true)
     }
     
-    @objc private func handleTapToDismissKeyboard() {
-        view.endEditing(true)
-    }
     
     // MARK: - Helper Methods
     
@@ -711,48 +761,78 @@ class ContactEditViewController: BaseViewController {
         present(alertController, animated: true)
     }
     
+    // MARK: - Keyboard Handling
+    
+    /// 覆寫 BaseViewController 的鍵盤顯示處理（遵循 UI 設計規範）
+    override func keyboardWillShow(height: CGFloat, duration: Double) {
+        // 只調整 ScrollView 的 content inset，滾動已由點擊事件處理
+        UIView.animate(withDuration: duration, 
+                      delay: 0, 
+                      options: .curveEaseInOut, // 遵循 UI 規範第 7.2 條緩動函數
+                      animations: {
+            self.scrollView.contentInset.bottom = height
+            
+            // 使用 iOS 13+ 的新 API，向下相容舊版本
+            if #available(iOS 13.0, *) {
+                self.scrollView.verticalScrollIndicatorInsets.bottom = height
+            } else {
+                self.scrollView.scrollIndicatorInsets.bottom = height
+            }
+        })
+    }
+    
+    /// 覆寫 BaseViewController 的鍵盤隱藏處理
+    override func keyboardWillHide(duration: Double) {
+        UIView.animate(withDuration: duration, 
+                      delay: 0, 
+                      options: .curveEaseInOut, // 遵循 UI 規範第 7.2 條緩動函數
+                      animations: {
+            self.scrollView.contentInset.bottom = 0
+            
+            // 使用 iOS 13+ 的新 API，向下相容舊版本
+            if #available(iOS 13.0, *) {
+                self.scrollView.verticalScrollIndicatorInsets.bottom = 0
+            } else {
+                self.scrollView.scrollIndicatorInsets.bottom = 0
+            }
+        })
+    }
+    
+    /// 找到當前第一響應者欄位
+    private func findFirstResponder() -> UIView? {
+        let allFields: [UIView] = [
+            nameField, jobTitleField, companyField,
+            emailField, phoneField, mobileField,
+            addressField, websiteField
+        ]
+        
+        return allFields.first { $0.isFirstResponder }
+    }
+    
+    /// 智能滾動到活躍欄位（遵循 UI 設計規範）
+    private func scrollToActiveField(_ field: UIView, keyboardHeight: CGFloat, duration: Double) {
+        // 計算欄位在 scrollView 中的位置
+        let fieldFrame = contentView.convert(field.frame, to: scrollView)
+        let visibleHeight = scrollView.frame.height - keyboardHeight
+        
+        // 使用 UI 規範第 4.1 條的標準間距（16pt）作為安全邊距
+        let fieldBottom = fieldFrame.maxY + AppTheme.Layout.standardPadding
+        
+        // 只在欄位被遮擋時才滾動
+        if fieldBottom > visibleHeight {
+            let scrollPoint = CGPoint(x: 0, y: fieldBottom - visibleHeight + scrollView.contentOffset.y)
+            
+            UIView.animate(withDuration: duration, 
+                          delay: 0, 
+                          options: .curveEaseInOut, // 遵循 UI 規範第 7.2 條緩動函數
+                          animations: {
+                self.scrollView.setContentOffset(scrollPoint, animated: false)
+            })
+        }
+    }
+    
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
 }
 
-// MARK: - Keyboard Handling
-
-extension ContactEditViewController {
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        view.endEditing(true)
-    }
-    
-    private func registerKeyboardNotifications() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleKeyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleKeyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
-    }
-    
-    @objc private func handleKeyboardWillShow(_ notification: Notification) {
-        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
-            return
-        }
-        
-        let keyboardHeight = keyboardFrame.height
-        scrollView.contentInset.bottom = keyboardHeight
-        scrollView.scrollIndicatorInsets.bottom = keyboardHeight
-    }
-    
-    @objc private func handleKeyboardWillHide(_ notification: Notification) {
-        scrollView.contentInset.bottom = 0
-        scrollView.scrollIndicatorInsets.bottom = 0
-    }
-}

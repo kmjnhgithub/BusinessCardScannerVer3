@@ -5,7 +5,10 @@
       "Bash(xcodebuild build:*)",
       "Bash(xcodebuild:*)",
       "Bash(grep:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(gemini:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
