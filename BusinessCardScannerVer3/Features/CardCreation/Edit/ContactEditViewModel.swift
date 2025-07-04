@@ -53,10 +53,23 @@ class ContactEditViewModel: BaseViewModel {
     @Published private(set) var isSaveEnabled: Bool = false
     @Published private(set) var hasUnsavedChanges: Bool = false
     
+    /// 當前是否處於編輯模式（用於檢視/編輯狀態切換）
+    @Published private(set) var isCurrentlyEditing: Bool = false
+    
     // MARK: - Computed Properties
     
     var isEditing: Bool {
         return existingCard != nil
+    }
+    
+    /// 是否為檢視模式（有既有名片但目前不在編輯狀態）
+    var isViewMode: Bool {
+        return isEditing && !isCurrentlyEditing
+    }
+    
+    /// 表單欄位是否應該啟用
+    var isFormEnabled: Bool {
+        return !isViewMode
     }
     
     // MARK: - Initialization
@@ -106,6 +119,9 @@ class ContactEditViewModel: BaseViewModel {
         
         super.init()
         
+        // 設定初始編輯狀態
+        setInitialEditingState()
+        
         setupBindings()
         loadPhotoIfNeeded()
         
@@ -115,6 +131,7 @@ class ContactEditViewModel: BaseViewModel {
             
             print("🔄 ContactEditViewModel: 延遲觸發 UI 更新")
             print("   Current cardData.name: \(self.cardData.name ?? "nil")")
+            print("   Initial editing state: isEditing=\(self.isEditing), isCurrentlyEditing=\(self.isCurrentlyEditing)")
             
             // 強制觸發 @Published 屬性更新
             let currentData = self.cardData
@@ -128,6 +145,19 @@ class ContactEditViewModel: BaseViewModel {
     }
     
     // MARK: - Setup
+    
+    /// 設定初始編輯狀態
+    private func setInitialEditingState() {
+        if isEditing {
+            // 編輯既有名片：先進入檢視模式
+            isCurrentlyEditing = false
+            print("📋 ContactEditViewModel: 初始狀態設為檢視模式（既有名片）")
+        } else {
+            // 新增名片：直接進入編輯模式
+            isCurrentlyEditing = true
+            print("📋 ContactEditViewModel: 初始狀態設為編輯模式（新增名片）")
+        }
+    }
     
     override func setupBindings() {
         // Validate form whenever card data changes
@@ -198,30 +228,19 @@ class ContactEditViewModel: BaseViewModel {
     
     // MARK: - Photo Management
     
-    func selectPhotoFromCamera() {
-        // In a real implementation, this would present camera interface
-        // For now, we'll just log the action
-        print("📸 ContactEditViewModel: 從相機選擇照片")
-        // This would typically be handled by a coordinator or delegate
-    }
-    
-    func selectPhotoFromLibrary() {
-        // In a real implementation, this would present photo library
-        // For now, we'll just log the action
-        print("🖼️ ContactEditViewModel: 從相簿選擇照片")
-        // This would typically be handled by a coordinator or delegate
-    }
     
     func updatePhoto(_ newPhoto: UIImage?) {
+        if let newPhoto = newPhoto {
+            print("📷 ContactEditViewModel: 更新照片，尺寸: \(newPhoto.size)")
+        } else {
+            print("📷 ContactEditViewModel: 清除照片")
+        }
+        
         currentPhoto = newPhoto
         photo = newPhoto
         updateHasUnsavedChanges()
-    }
-    
-    func removePhoto() {
-        currentPhoto = nil
-        photo = nil
-        updateHasUnsavedChanges()
+        
+        print("✅ ContactEditViewModel: 照片更新完成，變更狀態: \(hasUnsavedChanges)")
     }
     
     // MARK: - Validation
@@ -311,6 +330,57 @@ class ContactEditViewModel: BaseViewModel {
             // No original photo
             return currentPhoto != nil // Photo was added
         }
+    }
+    
+    // MARK: - State Transition Methods
+    
+    /// 進入編輯模式（從檢視模式）
+    func enterEditMode() {
+        guard isViewMode else {
+            print("⚠️ ContactEditViewModel: 嘗試進入編輯模式，但目前不在檢視模式")
+            return
+        }
+        
+        print("✏️ ContactEditViewModel: 進入編輯模式")
+        isCurrentlyEditing = true
+        // originalCardData 已經在初始化時設定好，不需要重新備份
+    }
+    
+    /// 取消編輯，恢復到檢視模式
+    func cancelEditingAndRestore() {
+        guard isEditing && isCurrentlyEditing else {
+            print("⚠️ ContactEditViewModel: 嘗試取消編輯，但目前不在編輯模式")
+            return
+        }
+        
+        print("↩️ ContactEditViewModel: 取消編輯，恢復原始資料")
+        // 恢復原始資料
+        cardData = originalCardData
+        
+        // 如果有原始照片路徑，重新載入照片
+        if let photoPath = photoPath {
+            loadPhotoIfNeeded()
+        } else {
+            photo = nil
+            currentPhoto = nil
+        }
+        
+        // 切換到檢視模式
+        isCurrentlyEditing = false
+        
+        // hasUnsavedChanges 會透過 cardData 變更自動更新
+    }
+    
+    /// 儲存成功後切換到檢視模式
+    func saveAndExitEditMode() {
+        guard isEditing && isCurrentlyEditing else {
+            print("⚠️ ContactEditViewModel: 嘗試儲存並退出編輯模式，但狀態不正確")
+            return
+        }
+        
+        print("💾 ContactEditViewModel: 儲存並切換到檢視模式")
+        isCurrentlyEditing = false
+        // originalCardData 會在 completeSave 中更新
     }
     
     // MARK: - Save Operation
@@ -470,6 +540,12 @@ class ContactEditViewModel: BaseViewModel {
         isLoading = false
         originalCardData = cardData
         hasUnsavedChanges = false
+        
+        // 如果是編輯既有名片，儲存成功後切換到檢視模式
+        if isEditing && isCurrentlyEditing {
+            saveAndExitEditMode()
+        }
+        
         completion(.success(savedCard))
     }
     

@@ -499,7 +499,8 @@ private extension BusinessCardParser {
                         let matches = regex.matches(in: line, options: [], range: NSRange(line.startIndex..., in: line))
                         if let match = matches.first, match.numberOfRanges > 1 {
                             if let range = Range(match.range(at: 1), in: line) {
-                                return String(line[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+                                let addressText = String(line[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+                                return cleanAddress(addressText)
                             }
                         }
                     }
@@ -521,11 +522,39 @@ private extension BusinessCardParser {
             
             // 如果包含至少3個地址特徵且包含「號」，視為地址
             if indicatorCount >= 3 && line.contains("號") && line.count > 8 {
-                return line
+                return cleanAddress(line)
             }
         }
         
         return nil
+    }
+    
+    /// 清理地址中的郵遞區號和序號
+    /// - Parameter address: 原始地址
+    /// - Returns: 清理後的地址
+    private func cleanAddress(_ address: String) -> String {
+        guard !address.isEmpty else { return address }
+        
+        var cleanedAddress = address
+        
+        // 1. 移除開頭的序號（如：1臺北市、2.新北市、3)高雄市等）
+        cleanedAddress = cleanedAddress.replacingOccurrences(
+            of: "^\\d+[.\\)）、\\s]*",
+            with: "",
+            options: .regularExpression
+        )
+        
+        // 2. 移除開頭的郵遞區號（台灣郵遞區號為3-5位數字）
+        cleanedAddress = cleanedAddress.replacingOccurrences(
+            of: "^\\d{3,5}\\s*",
+            with: "",
+            options: .regularExpression
+        )
+        
+        // 3. 移除可能的多餘空格和標點符號
+        cleanedAddress = cleanedAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return cleanedAddress
     }
     
     func extractWebsite(from text: String) -> String? {

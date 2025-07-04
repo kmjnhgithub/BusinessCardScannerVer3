@@ -7,6 +7,7 @@
 
 import UIKit
 import Combine
+import PhotosUI
 
 class CardCreationCoordinator: BaseCoordinator {
     
@@ -22,6 +23,9 @@ class CardCreationCoordinator: BaseCoordinator {
     
     // 持有子 Coordinator 的引用
     private var photoPickerCoordinator: PhotoPickerCoordinator?
+    
+    // 追蹤當前的ContactEditViewController用於照片更新
+    private weak var currentEditViewController: ContactEditViewController?
     
     // MARK: - Initialization
     
@@ -40,6 +44,14 @@ class CardCreationCoordinator: BaseCoordinator {
     override func start() {
         print("📱 CardCreationCoordinator: 啟動，來源類型: \(sourceType)")
         
+        // 檢查是否有既有名片要編輯
+        if let editingCard = editingCard {
+            print("📝 編輯既有名片: \(editingCard.name)")
+            showEditForm(for: editingCard)
+            return
+        }
+        
+        // 否則根據來源類型啟動相應流程
         switch sourceType {
         case .camera:
             startCameraFlow()
@@ -85,9 +97,9 @@ class CardCreationCoordinator: BaseCoordinator {
             .sink { [weak self] result in
                 print("📱 CardCreationCoordinator: 收到 BusinessCardService 處理結果")
                 switch result {
-                case .success(let parsedData):
-                    print("✅ 圖片處理成功，顯示編輯表單")
-                    self?.showEditForm(with: parsedData, photo: image)
+                case .success(let parsedData, let croppedImage):
+                    print("✅ 圖片處理成功，顯示編輯表單（使用裁切後的圖片）")
+                    self?.showEditForm(with: parsedData, photo: croppedImage)
                     
                 case .ocrFailed(let originalImage):
                     print("⚠️ OCR 失敗，提供選項讓用戶繼續")
@@ -137,6 +149,9 @@ class CardCreationCoordinator: BaseCoordinator {
         editViewController.delegate = self
         editViewController.sourceType = sourceType // 設置來源類型
         
+        // 追蹤當前編輯控制器用於照片更新
+        currentEditViewController = editViewController
+        
         let navController = UINavigationController(rootViewController: editViewController)
         navController.modalPresentationStyle = .pageSheet
         
@@ -155,6 +170,9 @@ class CardCreationCoordinator: BaseCoordinator {
         let editViewController = ContactEditViewController(viewModel: editViewModel)
         editViewController.delegate = self
         editViewController.sourceType = sourceType // 設置來源類型
+        
+        // 追蹤當前編輯控制器用於照片更新
+        currentEditViewController = editViewController
         
         let navController = UINavigationController(rootViewController: editViewController)
         navController.modalPresentationStyle = .pageSheet
@@ -216,6 +234,17 @@ private extension CardCreationCoordinator {
         navigationController.present(navController, animated: true)
     }
     
+    /// 從指定的ViewController顯示相機
+    private func presentCameraFrom(_ parentController: UIViewController) {
+        let cameraViewController = CameraViewController()
+        cameraViewController.delegate = self
+        
+        let navController = UINavigationController(rootViewController: cameraViewController)
+        navController.modalPresentationStyle = .fullScreen
+        
+        parentController.present(navController, animated: true)
+    }
+    
     /// 顯示相簿選擇器
     func presentPhotoLibrary() {
         print("📁 CardCreationCoordinator: 準備啟動相簿選擇器")
@@ -232,6 +261,42 @@ private extension CardCreationCoordinator {
         
         // 啟動 coordinator
         coordinator.start()
+        
+        print("✅ CardCreationCoordinator: 相簿選擇器啟動完成")
+    }
+    
+    /// 從指定的ViewController顯示相簿選擇器
+    private func presentPhotoLibraryFrom(_ parentController: UIViewController) {
+        print("📁 CardCreationCoordinator: 從編輯頁面啟動相簿選擇器")
+        
+        // 先檢查權限
+        dependencies.permissionManager.requestPhotoLibraryPermission { [weak self] status in
+            DispatchQueue.main.async {
+                switch status {
+                case .authorized:
+                    self?.presentPhotoPickerDirectly(from: parentController)
+                default:
+                    self?.showPermissionDeniedAlert(for: .photoLibrary)
+                }
+            }
+        }
+    }
+    
+    /// 直接呈現相簿選擇器
+    private func presentPhotoPickerDirectly(from parentController: UIViewController) {
+        // 配置 PHPicker
+        var configuration = PHPickerConfiguration()
+        configuration.filter = .images
+        configuration.selectionLimit = 1
+        configuration.preferredAssetRepresentationMode = .current
+        
+        // 建立選擇器
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+        picker.modalPresentationStyle = .formSheet
+        
+        // 在指定的controller上呈現
+        parentController.present(picker, animated: true)
         
         print("✅ CardCreationCoordinator: 相簿選擇器啟動完成")
     }
@@ -288,7 +353,7 @@ private extension CardCreationCoordinator {
         print("🧹 CardCreationCoordinator: 清理暫存資源")
         
         // 根據架構文檔，取消時需要清理暫存照片
-        if let temporaryPhoto = temporaryPhoto {
+        if temporaryPhoto != nil {
             print("📸 清理暫存照片")
             // 在這裡可以實現特定的照片清理邏輯
             // 例如：從暫存目錄刪除、釋放記憶體等
@@ -309,8 +374,22 @@ extension CardCreationCoordinator: CameraViewControllerDelegate {
         
         // 關閉相機界面
         currentViewController?.dismiss(animated: true) { [weak self] in
-            // 處理拍攝的圖片
-            self?.processSelectedImage(image)
+            guard let self = self else { return }
+            
+            // 檢查是否為手動輸入模式
+            if self.sourceType == .manual {
+                print("📸 手動輸入模式：直接更新照片，不進行 OCR")
+                // 手動輸入模式：直接更新照片，不進行 OCR
+                self.updateEditViewPhoto(image)
+            } else if self.currentEditViewController != nil {
+                print("📸 編輯頁面拍攝：嘗試偵測名片區域後更新")
+                // 編輯頁面拍攝：嘗試偵測和裁切名片，但不進行 OCR
+                self.processPhotoForEditing(image)
+            } else {
+                print("📸 處理照片進行完整 OCR 流程")
+                // 其他情況：進行完整的 OCR 處理
+                self.processSelectedImage(image)
+            }
         }
     }
     
@@ -426,6 +505,117 @@ extension CardCreationCoordinator: ContactEditViewControllerDelegate {
             // 手動輸入不應該到這裡，但以防萬一
             showManualEntry()
         }
+    }
+    
+    // MARK: - Photo Selection Delegate Methods
+    
+    func contactEditViewControllerDidRequestCameraPhoto(_ controller: ContactEditViewController) {
+        print("📸 CardCreationCoordinator: 用戶請求相機拍照")
+        
+        // 檢查權限並啟動相機
+        checkCameraPermissionAndProceed { [weak self] in
+            // 在編輯頁面之上present相機
+            self?.presentCameraFrom(controller)
+        }
+    }
+    
+    func contactEditViewControllerDidRequestLibraryPhoto(_ controller: ContactEditViewController) {
+        print("🖼️ CardCreationCoordinator: 用戶請求相簿選擇")
+        
+        // 檢查權限並啟動相簿選擇
+        checkPhotoLibraryPermissionAndProceed { [weak self] in
+            // 在編輯頁面之上present相簿選擇器
+            self?.presentPhotoLibraryFrom(controller)
+        }
+    }
+}
+
+// MARK: - PHPickerViewControllerDelegate
+
+extension CardCreationCoordinator: PHPickerViewControllerDelegate {
+    
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        
+        guard let result = results.first else {
+            print("❌ CardCreationCoordinator: 沒有選擇照片")
+            return
+        }
+        
+        // 處理選擇的照片
+        result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("❌ CardCreationCoordinator: 載入照片失敗: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let image = object as? UIImage else {
+                    print("❌ CardCreationCoordinator: 照片格式不正確")
+                    return
+                }
+                
+                print("✅ CardCreationCoordinator: 成功載入照片")
+                
+                // 檢查是否為手動輸入模式
+                if self.sourceType == .manual {
+                    print("📷 手動輸入模式：直接更新照片，不進行 OCR")
+                    // 手動輸入模式：直接更新照片，不進行 OCR
+                    self.updateEditViewPhoto(image)
+                } else if self.currentEditViewController != nil {
+                    print("📷 編輯頁面選擇照片：嘗試偵測名片區域後更新")
+                    // 編輯頁面選擇照片：嘗試偵測和裁切名片，但不進行 OCR
+                    self.processPhotoForEditing(image)
+                } else {
+                    print("📷 處理照片進行完整 OCR 流程")
+                    // 其他情況：進行完整的 OCR 處理
+                    self.processSelectedImage(image)
+                }
+            }
+        }
+    }
+    
+    /// 處理編輯頁面的照片選擇（嘗試偵測名片區域但不進行 OCR）
+    private func processPhotoForEditing(_ image: UIImage) {
+        print("📷 CardCreationCoordinator: 嘗試偵測和裁切名片區域")
+        
+        // 使用 VisionService 嘗試偵測和裁切名片
+        dependencies.visionService.detectRectangle(in: image) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                switch result {
+                case .success(let observation):
+                    print("✅ 偵測到名片區域，進行裁切")
+                    // 偵測成功，進行裁切
+                    self.dependencies.visionService.cropCard(from: image, observation: observation) { cropResult in
+                        DispatchQueue.main.async {
+                            switch cropResult {
+                            case .success(let croppedImage):
+                                print("✅ 名片裁切成功，更新編輯頁面照片")
+                                self.updateEditViewPhoto(croppedImage)
+                            case .failure(_):
+                                print("⚠️ 名片裁切失敗，使用原圖")
+                                self.updateEditViewPhoto(image)
+                            }
+                        }
+                    }
+                case .failure(_):
+                    print("⚠️ 未偵測到名片區域，使用原圖")
+                    // 偵測失敗，直接使用原圖
+                    self.updateEditViewPhoto(image)
+                }
+            }
+        }
+    }
+    
+    /// 更新編輯頁面的照片
+    private func updateEditViewPhoto(_ image: UIImage) {
+        print("📷 CardCreationCoordinator: 更新編輯頁面照片")
+        // 使用追蹤的編輯控制器更新照片
+        currentEditViewController?.updatePhoto(image)
     }
 }
 

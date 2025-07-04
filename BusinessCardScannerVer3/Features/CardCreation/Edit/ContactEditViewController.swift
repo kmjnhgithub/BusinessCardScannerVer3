@@ -15,6 +15,10 @@ protocol ContactEditViewControllerDelegate: AnyObject {
     
     // 新增：支援儲存成功後的選項處理
     func contactEditViewController(_ controller: ContactEditViewController, didSaveCard card: BusinessCard, shouldShowContinueOptions: Bool)
+    
+    // 新增：照片選擇委託方法
+    func contactEditViewControllerDidRequestCameraPhoto(_ controller: ContactEditViewController)
+    func contactEditViewControllerDidRequestLibraryPhoto(_ controller: ContactEditViewController)
 }
 
 class ContactEditViewController: BaseViewController {
@@ -35,7 +39,6 @@ class ContactEditViewController: BaseViewController {
     // Photo section
     private lazy var photoImageView = UIImageView()
     private lazy var changePhotoButton = ThemedButton(style: .secondary)
-    private lazy var removePhotoButton = ThemedButton(style: .danger)
     
     // Form fields
     private lazy var nameField = FormFieldView.makeName(required: true)
@@ -67,12 +70,13 @@ class ContactEditViewController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
+        setupNavigationBar()
         bindViewModel()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        setupNavigationBar()
+        // NavigationBar 現在透過 Combine 響應式更新，不需要手動設置
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -99,21 +103,8 @@ class ContactEditViewController: BaseViewController {
     }
     
     private func setupNavigationBar() {
+        // 只設置標題，按鈕會透過 updateNavigationBarForState() 動態設置
         title = viewModel.isEditing ? "編輯名片" : "新增名片"
-        
-        // Close button
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .close,
-            target: self,
-            action: #selector(cancelTapped)
-        )
-        
-        // Save button
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .save,
-            target: self,
-            action: #selector(saveTapped)
-        )
     }
     
     private func setupScrollView() {
@@ -137,11 +128,7 @@ class ContactEditViewController: BaseViewController {
         changePhotoButton.setTitle("更換照片", for: .normal)
         changePhotoButton.addTarget(self, action: #selector(changePhotoTapped), for: .touchUpInside)
         
-        // Remove photo button
-        removePhotoButton.setTitle("移除照片", for: .normal)
-        removePhotoButton.addTarget(self, action: #selector(removePhotoTapped), for: .touchUpInside)
-        
-        [photoImageView, changePhotoButton, removePhotoButton].forEach {
+        [photoImageView, changePhotoButton].forEach {
             contentView.addSubview($0)
         }
     }
@@ -212,21 +199,16 @@ class ContactEditViewController: BaseViewController {
             make.width.equalToSuperview()
         }
         
-        // Photo section
+        // Photo section - 增大照片顯示區域
         photoImageView.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(AppTheme.Layout.standardPadding)
             make.centerX.equalToSuperview()
-            make.width.height.equalTo(120)
+            make.width.equalTo(200)  // 增加寬度以更好顯示名片
+            make.height.equalTo(130) // 名片比例約 1.54:1，調整高度
         }
         
         changePhotoButton.snp.makeConstraints { make in
             make.top.equalTo(photoImageView.snp.bottom).offset(AppTheme.Layout.standardPadding)
-            make.centerX.equalToSuperview()
-            make.width.equalTo(120)
-        }
-        
-        removePhotoButton.snp.makeConstraints { make in
-            make.top.equalTo(changePhotoButton.snp.bottom).offset(AppTheme.Layout.compactPadding)
             make.centerX.equalToSuperview()
             make.width.equalTo(120)
         }
@@ -243,7 +225,7 @@ class ContactEditViewController: BaseViewController {
                 make.left.right.equalToSuperview().inset(AppTheme.Layout.standardPadding)
                 
                 if index == 0 {
-                    make.top.equalTo(removePhotoButton.snp.bottom).offset(AppTheme.Layout.sectionPadding)
+                    make.top.equalTo(changePhotoButton.snp.bottom).offset(AppTheme.Layout.sectionPadding)
                 } else {
                     make.top.equalTo(formFields[index - 1].snp.bottom).offset(AppTheme.Layout.standardPadding)
                 }
@@ -334,8 +316,14 @@ class ContactEditViewController: BaseViewController {
         viewModel.$isSaveEnabled
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isEnabled in
-                self?.saveButton.isEnabled = isEnabled
-                self?.navigationItem.rightBarButtonItem?.isEnabled = isEnabled
+                guard let self = self else { return }
+                self.saveButton.isEnabled = isEnabled
+                
+                // 只有在非檢視模式時才更新 NavigationBar 按鈕的啟用狀態
+                // 檢視模式的編輯按鈕不應該受 isSaveEnabled 影響
+                if !self.viewModel.isViewMode {
+                    self.navigationItem.rightBarButtonItem?.isEnabled = isEnabled
+                }
             }
             .store(in: &cancellables)
         
@@ -349,20 +337,37 @@ class ContactEditViewController: BaseViewController {
                 }
             }
             .store(in: &cancellables)
+        
+        // 新增：編輯狀態綁定
+        viewModel.$isCurrentlyEditing
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isCurrentlyEditing in
+                self?.updateUIForEditingState(isCurrentlyEditing)
+            }
+            .store(in: &cancellables)
+        
+        // 初始化NavigationBar狀態
+        DispatchQueue.main.async { [weak self] in
+            self?.updateNavigationBarForState()
+        }
     }
     
     private func setupReturnKeyNavigation() {
-        let fields = [
+        // 處理單行表單欄位
+        let singleLineFields = [
             nameField, jobTitleField, companyField,
             emailField, phoneField, mobileField,
-            addressField, websiteField
+            websiteField
         ]
         
-        for (index, field) in fields.enumerated() {
+        for (index, field) in singleLineFields.enumerated() {
             field.returnPublisher
                 .sink { [weak self] in
-                    if index < fields.count - 1 {
-                        _ = fields[index + 1].becomeFirstResponder()
+                    if index == singleLineFields.count - 2 {
+                        // 在手機欄位後跳到地址欄位
+                        _ = self?.addressField.becomeFirstResponder()
+                    } else if index < singleLineFields.count - 1 {
+                        _ = singleLineFields[index + 1].becomeFirstResponder()
                     } else {
                         _ = field.resignFirstResponder()
                         self?.saveTapped()
@@ -370,6 +375,9 @@ class ContactEditViewController: BaseViewController {
                 }
                 .store(in: &cancellables)
         }
+        
+        // 地址欄位沒有 returnPublisher，所以手動處理焦點跳轉
+        // 從手機欄位（index 5）跳到地址欄位的邏輯已在上面處理
     }
     
     // MARK: - UI Updates
@@ -404,24 +412,34 @@ class ContactEditViewController: BaseViewController {
     }
     
     private func updatePhotoUI(with photo: UIImage?) {
+        print("📷 ContactEditViewController: 更新照片 UI")
+        
         if let photo = photo {
+            print("✅ 設置照片，尺寸: \(photo.size)")
             photoImageView.image = photo
             photoImageView.contentMode = .scaleAspectFill
-            removePhotoButton.isHidden = false
+            photoImageView.tintColor = nil  // 清除 tint color
         } else {
+            print("⚠️ 設置預設照片圖示")
             photoImageView.image = UIImage(systemName: "person.fill")
             photoImageView.contentMode = .scaleAspectFit
             photoImageView.tintColor = AppTheme.Colors.placeholder
-            removePhotoButton.isHidden = true
         }
+        
+        // 強制重新布局確保照片顯示正確
+        photoImageView.setNeedsLayout()
+        photoImageView.layoutIfNeeded()
     }
     
     private func updateValidationErrors(_ errors: [String: String]) {
         // Clear all errors first
         [nameField, jobTitleField, companyField, emailField, 
-         phoneField, mobileField, addressField, websiteField].forEach {
+         phoneField, mobileField, websiteField].forEach {
             $0.errorMessage = nil
         }
+        
+        // Clear address field error separately
+        addressField.errorMessage = nil
         
         // Set specific errors
         nameField.errorMessage = errors["name"]
@@ -432,6 +450,104 @@ class ContactEditViewController: BaseViewController {
         mobileField.errorMessage = errors["mobile"]
         addressField.errorMessage = errors["address"]
         websiteField.errorMessage = errors["website"]
+    }
+    
+    /// 根據編輯狀態更新UI
+    private func updateUIForEditingState(_ isCurrentlyEditing: Bool) {
+        let isFormEnabled = viewModel.isFormEnabled
+        let isViewMode = viewModel.isViewMode
+        
+        print("🎨 ContactEditViewController: 更新編輯狀態 UI")
+        print("   isCurrentlyEditing: \(isCurrentlyEditing)")
+        print("   isFormEnabled: \(isFormEnabled)")
+        print("   isViewMode: \(isViewMode)")
+        
+        // 更新表單欄位啟用狀態
+        updateFormFieldsEnabled(isFormEnabled)
+        
+        // 更新照片操作按鈕顯示
+        updatePhotoButtonsVisibility(isFormEnabled)
+        
+        // 更新 NavigationBar
+        updateNavigationBarForState()
+    }
+    
+    /// 更新表單欄位的啟用狀態
+    private func updateFormFieldsEnabled(_ isEnabled: Bool) {
+        let singleLineFields = [nameField, jobTitleField, companyField, emailField, 
+                               phoneField, mobileField, websiteField]
+        
+        singleLineFields.forEach { field in
+            field.isEditable = isEnabled
+        }
+        
+        // 處理多行地址欄位
+        addressField.isEditable = isEnabled
+    }
+    
+    /// 更新照片操作按鈕的顯示狀態
+    private func updatePhotoButtonsVisibility(_ isEnabled: Bool) {
+        // 檢視模式：隱藏照片操作按鈕
+        // 編輯模式：根據來源類型決定是否顯示（手動輸入顯示完整功能，其他限制更換）
+        let shouldShowPhotoButtons = isEnabled
+        
+        changePhotoButton.isHidden = !shouldShowPhotoButtons
+        
+        // 如果是編輯既有名片且不是手動輸入，可以考慮限制照片更換功能
+        if viewModel.isEditing && sourceType != .manual {
+            // 您提到的照片更換功能缺失，這裡可以進一步限制
+            changePhotoButton.isEnabled = false
+            changePhotoButton.setTitle("照片功能暫不可用", for: .normal)
+        } else {
+            changePhotoButton.isEnabled = shouldShowPhotoButtons
+            changePhotoButton.setTitle("更換照片", for: .normal)
+        }
+    }
+    
+    /// 更新 NavigationBar 按鈕
+    private func updateNavigationBarForState() {
+        print("🔄 ContactEditViewController: 更新 NavigationBar")
+        print("   isViewMode: \(viewModel.isViewMode)")
+        print("   isEditing: \(viewModel.isEditing)")
+        print("   isCurrentlyEditing: \(viewModel.isCurrentlyEditing)")
+        
+        if viewModel.isViewMode {
+            // 檢視模式：右上角顯示「編輯」按鈕
+            let editButton = UIBarButtonItem(
+                title: "編輯",
+                style: .plain,
+                target: self,
+                action: #selector(editButtonTapped)
+            )
+            editButton.isEnabled = true // 確保編輯按鈕始終可用
+            navigationItem.rightBarButtonItem = editButton
+            navigationItem.leftBarButtonItem = nil // 清除左側按鈕
+            print("✅ 設置編輯按鈕，isEnabled: \(editButton.isEnabled)")
+            
+        } else {
+            // 編輯模式：右上角顯示「完成」，左上角顯示「取消」
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                title: viewModel.isEditing ? "完成" : "儲存",
+                style: .done,
+                target: self,
+                action: #selector(saveTapped)
+            )
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                title: "取消",
+                style: .plain,
+                target: self,
+                action: #selector(cancelTapped)
+            )
+            print("✅ 設置儲存/取消按鈕")
+        }
+    }
+    
+    // MARK: - Public Methods
+    
+    /// 更新照片（供外部調用）
+    func updatePhoto(_ photo: UIImage) {
+        print("📷 ContactEditViewController: 外部請求更新照片，尺寸: \(photo.size)")
+        viewModel.updatePhoto(photo)
     }
     
     // MARK: - Actions
@@ -462,11 +578,33 @@ class ContactEditViewController: BaseViewController {
     }
     
     @objc private func cancelTapped() {
-        if viewModel.hasUnsavedChanges {
-            showUnsavedChangesAlert()
-        } else {
-            delegate?.contactEditViewControllerDidCancel(self)
+        if viewModel.isViewMode {
+            // 檢視模式不應該有取消按鈕，但以防萬一
+            return
         }
+        
+        if viewModel.isEditing && viewModel.isCurrentlyEditing {
+            // 編輯既有名片時的取消：恢復原始資料並回到檢視模式
+            if viewModel.hasUnsavedChanges {
+                showCancelEditAlert()
+            } else {
+                viewModel.cancelEditingAndRestore()
+            }
+        } else {
+            // 新增名片時的取消：退出整個流程
+            if viewModel.hasUnsavedChanges {
+                showUnsavedChangesAlert()
+            } else {
+                delegate?.contactEditViewControllerDidCancel(self)
+            }
+        }
+    }
+    
+    @objc private func editButtonTapped() {
+        guard viewModel.isViewMode else { return }
+        
+        print("✏️ ContactEditViewController: 點擊編輯按鈕")
+        viewModel.enterEditMode()
     }
     
     @objc private func changePhotoTapped() {
@@ -477,11 +615,13 @@ class ContactEditViewController: BaseViewController {
         )
         
         alertController.addAction(UIAlertAction(title: "相機", style: .default) { [weak self] _ in
-            self?.viewModel.selectPhotoFromCamera()
+            guard let self = self else { return }
+            self.delegate?.contactEditViewControllerDidRequestCameraPhoto(self)
         })
         
         alertController.addAction(UIAlertAction(title: "相簿", style: .default) { [weak self] _ in
-            self?.viewModel.selectPhotoFromLibrary()
+            guard let self = self else { return }
+            self.delegate?.contactEditViewControllerDidRequestLibraryPhoto(self)
         })
         
         alertController.addAction(UIAlertAction(title: "取消", style: .cancel))
@@ -493,10 +633,6 @@ class ContactEditViewController: BaseViewController {
         }
         
         present(alertController, animated: true)
-    }
-    
-    @objc private func removePhotoTapped() {
-        viewModel.removePhoto()
     }
     
     @objc private func handleTapToDismissKeyboard() {
@@ -529,6 +665,23 @@ class ContactEditViewController: BaseViewController {
         )
         
         alertController.addAction(UIAlertAction(title: "確定", style: .default))
+        present(alertController, animated: true)
+    }
+    
+    /// 顯示取消編輯確認對話框
+    private func showCancelEditAlert() {
+        let alertController = UIAlertController(
+            title: "取消編輯",
+            message: "您有未儲存的變更，確定要取消編輯嗎？",
+            preferredStyle: .alert
+        )
+        
+        alertController.addAction(UIAlertAction(title: "取消編輯", style: .destructive) { [weak self] _ in
+            self?.viewModel.cancelEditingAndRestore()
+        })
+        
+        alertController.addAction(UIAlertAction(title: "繼續編輯", style: .cancel))
+        
         present(alertController, animated: true)
     }
     
