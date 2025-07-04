@@ -133,10 +133,10 @@ class ThemedTextField: UITextField {
                 : (self.isFirstResponder ? AppTheme.Colors.primary : AppTheme.Colors.separator)
         }
         
-        // 震動效果（僅在新增錯誤時）
-//        if hasError && oldValue == nil {
-//            shake()
-//        }
+        // 震動效果（僅在新增錯誤時）- 使用 UIView+Theme 擴展
+        if hasError && (errorMessage != nil && !errorMessage!.isEmpty) {
+            shake()
+        }
     }
     
     /// 更新占位文字樣式

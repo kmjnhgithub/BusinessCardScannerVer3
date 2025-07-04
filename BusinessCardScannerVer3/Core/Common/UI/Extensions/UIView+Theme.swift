@@ -388,10 +388,5 @@ extension UIView {
             objc_setAssociatedObject(self, &AssociatedKeys.loadingView, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         })
     }
-}//
-//  Untitled.swift
-//  BusinessCardScannerVer3
-//
-//  Created by mike liu on 2025/6/26.
-//
+}
 

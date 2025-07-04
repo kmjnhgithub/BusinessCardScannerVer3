@@ -42,14 +42,8 @@ class BusinessCardCell: UITableViewCell {
         backgroundColor = AppTheme.Colors.background
         selectionStyle = .none
         
-        // 容器視圖
-        containerView.backgroundColor = AppTheme.Colors.cardBackground
-        containerView.layer.cornerRadius = AppTheme.Layout.cardCornerRadius
-        containerView.layer.shadowColor = AppTheme.Shadow.card.color
-        containerView.layer.shadowOpacity = AppTheme.Shadow.card.opacity
-        containerView.layer.shadowRadius = AppTheme.Shadow.card.radius
-        containerView.layer.shadowOffset = AppTheme.Shadow.card.offset
-        containerView.layer.masksToBounds = false
+        // 容器視圖 - 使用統一的卡片樣式
+        containerView.applyCardStyle()
         
         // 名片圖片
         cardImageView.contentMode = .scaleAspectFill

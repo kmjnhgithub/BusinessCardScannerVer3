@@ -87,20 +87,12 @@ class ThemedButton: UIButton {
     // MARK: - Setup
     
     private func setupButton() {
-        // 基本樣式設定
-        backgroundColor = style.backgroundColor
+        // 使用統一的按鈕樣式方法
+        applyButtonStyle(style)
+        
+        // 設定標題顏色和字體
         setTitleColor(style.titleColor, for: .normal)
         titleLabel?.font = AppTheme.Fonts.buttonTitle
-        
-        // 圓角設定
-        layer.cornerRadius = AppTheme.Layout.buttonCornerRadius
-        layer.masksToBounds = true
-        
-        // 邊框設定（僅文字按鈕）
-        if style.needsBorder {
-            layer.borderWidth = 1
-            layer.borderColor = AppTheme.Colors.primary.cgColor
-        }
         
         // 內容邊距設定
         contentEdgeInsets = UIEdgeInsets(

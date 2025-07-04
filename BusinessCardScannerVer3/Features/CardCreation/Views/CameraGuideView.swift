@@ -93,9 +93,7 @@ class CameraGuideView: UIView {
     
     private func setupScanFrame() {
         scanFrameView.backgroundColor = .clear
-        scanFrameView.layer.borderColor = AppTheme.Colors.scannerFrame.cgColor
-        scanFrameView.layer.borderWidth = 3
-        scanFrameView.layer.cornerRadius = AppTheme.Layout.cornerRadius
+        scanFrameView.addBorder(width: 3, color: AppTheme.Colors.scannerFrame, cornerRadius: AppTheme.Layout.cornerRadius)
         scanFrameView.isUserInteractionEnabled = false
     }
     
@@ -104,9 +102,7 @@ class CameraGuideView: UIView {
         
         corners.forEach { corner in
             corner.backgroundColor = .clear
-            corner.layer.borderColor = AppTheme.Colors.scannerFrame.cgColor
-            corner.layer.borderWidth = cornerLineWidth
-            corner.layer.cornerRadius = 4
+            corner.addBorder(width: cornerLineWidth, color: AppTheme.Colors.scannerFrame, cornerRadius: 4)
         }
     }
     
@@ -117,11 +113,8 @@ class CameraGuideView: UIView {
         guideLabel.textAlignment = .center
         guideLabel.numberOfLines = 1
         
-        // 添加陰影效果
-        guideLabel.layer.shadowColor = UIColor.black.cgColor
-        guideLabel.layer.shadowOffset = CGSize(width: 0, height: 1)
-        guideLabel.layer.shadowOpacity = 0.8
-        guideLabel.layer.shadowRadius = 2
+        // 添加陰影效果 - 使用 UIView+Theme 擴展
+        guideLabel.applyShadow()
     }
     
     private func setupConstraints() {

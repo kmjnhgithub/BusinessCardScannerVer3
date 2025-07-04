@@ -202,7 +202,8 @@ class FormSectionView: ThemedView {
             contentContainer.layer.cornerRadius = 0
             
         case .card:
-            contentContainer.backgroundColor = AppTheme.Colors.cardBackground
+            // 使用統一的卡片樣式，然後調整圓角為表單專用
+            contentContainer.applyCardStyle()
             contentContainer.layer.cornerRadius = AppTheme.Layout.formSectionCornerRadius
             
         case .grouped:

@@ -606,9 +606,15 @@ class ContactEditViewController: BaseViewController {
     // MARK: - Actions
     
     @objc private func saveTapped() {
+        // 顯示載入狀態 - 使用 UIView+Theme 擴展
+        view.showLoading(message: "儲存中...")
+        
         viewModel.save { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                
+                // 隱藏載入狀態
+                self.view.hideLoading()
                 
                 switch result {
                 case .success(let card):
