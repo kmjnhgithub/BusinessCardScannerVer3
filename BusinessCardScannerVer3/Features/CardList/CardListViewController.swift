@@ -290,7 +290,7 @@ extension CardListViewController: UITableViewDataSource {
 extension CardListViewController: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 88 // 根據UI設計規範
+        return BusinessCardCell.calculateOptimalCellHeight() // 響應式高度
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {

@@ -269,6 +269,41 @@ enum AppTheme {
         
         /// 大圓角半徑 - 16pt
         static let largeCornerRadius: CGFloat = 16
+        
+        // MARK: - Responsive Layout System
+        
+        /// 響應式佈局系統（基於 UI 設計規範文檔 v1.0 第 5.5 節）
+        enum ResponsiveLayout {
+            
+            /// 名片列表響應式規範
+            enum CardList {
+                /// Cell 高度比例（螢幕高度的 12%）
+                static let cellHeightRatio: CGFloat = 0.12
+                
+                /// 圖片黃金比例（寬度 = 高度 / 0.618）
+                static let imageAspectRatio: CGFloat = 0.618
+                
+                /// 圖片與文字間距
+                static let imageToTextSpacing: CGFloat = 12
+                
+                /// 文字行間距
+                static let nameToCompanySpacing: CGFloat = 6
+                static let companyToJobTitleSpacing: CGFloat = 4
+                
+                /// 計算當前螢幕的最佳 Cell 高度
+                static func calculateCellHeight() -> CGFloat {
+                    let screenHeight = UIScreen.main.bounds.height
+                    return screenHeight * cellHeightRatio
+                }
+                
+                /// 計算圖片尺寸（基於 Cell 內容高度）
+                static func calculateImageSize(cellContentHeight: CGFloat) -> CGSize {
+                    let imageHeight = cellContentHeight
+                    let imageWidth = imageHeight / imageAspectRatio
+                    return CGSize(width: imageWidth, height: imageHeight)
+                }
+            }
+        }
     }
     
     // MARK: - Shadow

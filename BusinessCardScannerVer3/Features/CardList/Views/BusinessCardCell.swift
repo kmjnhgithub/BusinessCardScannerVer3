@@ -25,6 +25,13 @@ class BusinessCardCell: UITableViewCell {
     /// PhotoService 用於載入照片
     private var photoService: PhotoServiceProtocol?
     
+    // MARK: - Static Methods
+    
+    /// 計算當前螢幕的最佳 Cell 高度
+    static func calculateOptimalCellHeight() -> CGFloat {
+        return AppTheme.Layout.ResponsiveLayout.CardList.calculateCellHeight()
+    }
+    
     // MARK: - Initialization
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -54,18 +61,18 @@ class BusinessCardCell: UITableViewCell {
         cardImageView.layer.cornerRadius = 8
         cardImageView.layer.masksToBounds = true
         
-        // 姓名標籤
-        nameLabel.font = AppTheme.Fonts.bodyBold
+        // 姓名標籤 - 使用專用名片姓名字型（18pt, Semibold）
+        nameLabel.font = AppTheme.Fonts.cardName
         nameLabel.textColor = AppTheme.Colors.primaryText
         nameLabel.numberOfLines = 1
         
-        // 公司標籤
-        companyLabel.font = AppTheme.Fonts.callout
+        // 公司標籤 - 使用專用公司名稱字型（16pt, Regular）
+        companyLabel.font = AppTheme.Fonts.companyName
         companyLabel.textColor = AppTheme.Colors.secondaryText
         companyLabel.numberOfLines = 1
         
-        // 職稱標籤
-        jobTitleLabel.font = AppTheme.Fonts.footnote
+        // 職稱標籤 - 使用專用職稱字型（14pt, Regular）
+        jobTitleLabel.font = AppTheme.Fonts.jobTitle
         jobTitleLabel.textColor = AppTheme.Colors.secondaryText
         jobTitleLabel.numberOfLines = 1
         
@@ -78,41 +85,47 @@ class BusinessCardCell: UITableViewCell {
     }
     
     private func setupConstraints() {
-        // 容器視圖約束
+        // 計算響應式尺寸
+        let cellHeight = AppTheme.Layout.ResponsiveLayout.CardList.calculateCellHeight()
+        let verticalMargin: CGFloat = 8
+        let containerHeight = cellHeight - (verticalMargin * 2)
+        let imageSize = AppTheme.Layout.ResponsiveLayout.CardList.calculateImageSize(cellContentHeight: containerHeight)
+        
+        // 容器視圖約束（響應式高度）
         containerView.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(8)
+            make.top.equalToSuperview().offset(verticalMargin)
             make.left.right.equalToSuperview().inset(AppTheme.Layout.standardPadding)
-            make.bottom.equalToSuperview().offset(-8)
-            make.height.equalTo(72) // 總高度88pt - 上下間距16pt = 72pt
+            make.bottom.equalToSuperview().offset(-verticalMargin)
+            make.height.equalTo(containerHeight) // 動態計算高度
         }
         
-        // 名片圖片約束
+        // 名片圖片約束（黃金比例，左貼齊）
         cardImageView.snp.makeConstraints { make in
-            make.left.equalToSuperview().offset(AppTheme.Layout.standardPadding)
-            make.centerY.equalToSuperview()
-            make.width.height.equalTo(56)
+            make.left.equalToSuperview() // 左貼齊容器，無間距
+            make.top.bottom.equalToSuperview() // 與容器高度完全貼合
+            make.width.equalTo(imageSize.width) // 黃金比例寬度
         }
         
         // 姓名標籤約束
         nameLabel.snp.makeConstraints { make in
-            make.left.equalTo(cardImageView.snp.right).offset(12)
+            make.left.equalTo(cardImageView.snp.right).offset(AppTheme.Layout.ResponsiveLayout.CardList.imageToTextSpacing)
             make.right.equalToSuperview().inset(AppTheme.Layout.standardPadding)
-            make.top.equalToSuperview().offset(12)
+            make.top.equalToSuperview().offset(AppTheme.Layout.standardPadding)
         }
         
         // 公司標籤約束
         companyLabel.snp.makeConstraints { make in
             make.left.equalTo(nameLabel)
             make.right.equalTo(nameLabel)
-            make.top.equalTo(nameLabel.snp.bottom).offset(4)
+            make.top.equalTo(nameLabel.snp.bottom).offset(AppTheme.Layout.ResponsiveLayout.CardList.nameToCompanySpacing)
         }
         
         // 職稱標籤約束
         jobTitleLabel.snp.makeConstraints { make in
             make.left.equalTo(nameLabel)
             make.right.equalTo(nameLabel)
-            make.top.equalTo(companyLabel.snp.bottom).offset(2)
-            make.bottom.lessThanOrEqualToSuperview().inset(12)
+            make.top.equalTo(companyLabel.snp.bottom).offset(AppTheme.Layout.ResponsiveLayout.CardList.companyToJobTitleSpacing)
+            make.bottom.lessThanOrEqualToSuperview().inset(AppTheme.Layout.standardPadding)
         }
     }
     
