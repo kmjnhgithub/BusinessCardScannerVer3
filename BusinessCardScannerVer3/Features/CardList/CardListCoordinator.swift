@@ -53,13 +53,14 @@ final class CardListCoordinator: BaseCoordinator {
     private func setupCardListModule() {
         // 從 ServiceContainer 取得依賴
         let repository = ServiceContainer.shared.businessCardRepository
+        let photoService = ServiceContainer.shared.photoService
         
         // 建立 ViewModel
         let viewModel = CardListViewModel(repository: repository)
         self.viewModel = viewModel
         
         // 建立 ViewController
-        let viewController = CardListViewController(viewModel: viewModel)
+        let viewController = CardListViewController(viewModel: viewModel, photoService: photoService)
         viewController.coordinatorDelegate = self // 設定 delegate
         self.viewController = viewController
         

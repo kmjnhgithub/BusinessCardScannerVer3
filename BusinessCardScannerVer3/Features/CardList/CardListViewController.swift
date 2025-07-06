@@ -37,13 +37,17 @@ class CardListViewController: BaseViewController {
     // Note: Made internal for testing purposes
     var viewModel: CardListViewModel!
     
+    /// PhotoService 用於載入名片照片
+    private var photoService: PhotoServiceProtocol!
+    
     /// Coordinator 委託 - 用於處理導航
     weak var coordinatorDelegate: CardListCoordinatorDelegate?
     
     // MARK: - Initialization
     
-    init(viewModel: CardListViewModel) {
+    init(viewModel: CardListViewModel, photoService: PhotoServiceProtocol) {
         self.viewModel = viewModel
+        self.photoService = photoService
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -272,7 +276,11 @@ extension CardListViewController: UITableViewDataSource {
         }
         
         let businessCard = viewModel.filteredCards[indexPath.row]
+        
+        // 設定 PhotoService 並配置 Cell
+        cell.setPhotoService(photoService)
         cell.configure(with: businessCard)
+        
         return cell
     }
 }

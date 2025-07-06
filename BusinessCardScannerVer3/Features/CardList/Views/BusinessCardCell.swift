@@ -22,6 +22,9 @@ class BusinessCardCell: UITableViewCell {
     
     static let reuseIdentifier = "BusinessCardCell"
     
+    /// PhotoService 用於載入照片
+    private var photoService: PhotoServiceProtocol?
+    
     // MARK: - Initialization
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -115,20 +118,64 @@ class BusinessCardCell: UITableViewCell {
     
     // MARK: - Configuration
     
+    /// 設定 PhotoService
+    func setPhotoService(_ photoService: PhotoServiceProtocol) {
+        self.photoService = photoService
+    }
+    
     func configure(with businessCard: BusinessCard) {
-        nameLabel.text = businessCard.name ?? "未知姓名"
+        nameLabel.text = businessCard.name.isEmpty ? "未知姓名" : businessCard.name
         companyLabel.text = businessCard.company ?? "未知公司"
         jobTitleLabel.text = businessCard.jobTitle ?? "未知職稱"
         
-        // 載入圖片（暫時使用占位圖）
-        if let photoPath = businessCard.photoPath, !photoPath.isEmpty {
-            // TODO: 實作圖片載入邏輯
-            cardImageView.image = UIImage(systemName: "person.crop.rectangle")
-            cardImageView.tintColor = AppTheme.Colors.secondaryText
-        } else {
-            cardImageView.image = UIImage(systemName: "person.crop.rectangle")
-            cardImageView.tintColor = AppTheme.Colors.secondaryText
+        // 載入圖片
+        loadImage(for: businessCard)
+    }
+    
+    /// 載入名片照片
+    private func loadImage(for businessCard: BusinessCard) {
+        // 重置 ImageView
+        cardImageView.image = nil
+        cardImageView.tintColor = AppTheme.Colors.secondaryText
+        
+        // 檢查是否有照片路徑
+        guard let photoPath = businessCard.photoPath, 
+              !photoPath.isEmpty,
+              let photoService = photoService else {
+            // 沒有照片或沒有 PhotoService，顯示預設圖示
+            setDefaultImage()
+            return
         }
+        
+        // 嘗試載入縮圖
+        if let thumbnail = photoService.loadThumbnail(path: photoPath) {
+            cardImageView.image = thumbnail
+            cardImageView.contentMode = .scaleAspectFill
+        } else {
+            // 縮圖載入失敗，嘗試載入原圖並產生縮圖
+            if let fullImage = photoService.loadPhoto(path: photoPath) {
+                // 產生縮圖並設定
+                let thumbnailSize = CGSize(width: 168, height: 168) // @3x for 56pt
+                if let thumbnail = photoService.generateThumbnail(from: fullImage, size: thumbnailSize) {
+                    cardImageView.image = thumbnail
+                    cardImageView.contentMode = .scaleAspectFill
+                } else {
+                    // 縮圖生成失敗，直接使用原圖
+                    cardImageView.image = fullImage
+                    cardImageView.contentMode = .scaleAspectFill
+                }
+            } else {
+                // 圖片載入完全失敗，顯示預設圖示
+                setDefaultImage()
+            }
+        }
+    }
+    
+    /// 設定預設圖示
+    private func setDefaultImage() {
+        cardImageView.image = UIImage(systemName: "person.crop.rectangle")
+        cardImageView.tintColor = AppTheme.Colors.secondaryText
+        cardImageView.contentMode = .scaleAspectFit
     }
     
     // MARK: - Cell Lifecycle
