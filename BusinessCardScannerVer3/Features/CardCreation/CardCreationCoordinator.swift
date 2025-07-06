@@ -234,16 +234,6 @@ private extension CardCreationCoordinator {
         navigationController.present(navController, animated: true)
     }
     
-    /// 從指定的ViewController顯示相機
-    private func presentCameraFrom(_ parentController: UIViewController) {
-        let cameraViewController = CameraViewController()
-        cameraViewController.delegate = self
-        
-        let navController = UINavigationController(rootViewController: cameraViewController)
-        navController.modalPresentationStyle = .fullScreen
-        
-        parentController.present(navController, animated: true)
-    }
     
     /// 顯示相簿選擇器
     func presentPhotoLibrary() {
@@ -265,41 +255,6 @@ private extension CardCreationCoordinator {
         print("✅ CardCreationCoordinator: 相簿選擇器啟動完成")
     }
     
-    /// 從指定的ViewController顯示相簿選擇器
-    private func presentPhotoLibraryFrom(_ parentController: UIViewController) {
-        print("📁 CardCreationCoordinator: 從編輯頁面啟動相簿選擇器")
-        
-        // 先檢查權限
-        dependencies.permissionManager.requestPhotoLibraryPermission { [weak self] status in
-            DispatchQueue.main.async {
-                switch status {
-                case .authorized:
-                    self?.presentPhotoPickerDirectly(from: parentController)
-                default:
-                    self?.showPermissionDeniedAlert(for: .photoLibrary)
-                }
-            }
-        }
-    }
-    
-    /// 直接呈現相簿選擇器
-    private func presentPhotoPickerDirectly(from parentController: UIViewController) {
-        // 配置 PHPicker
-        var configuration = PHPickerConfiguration()
-        configuration.filter = .images
-        configuration.selectionLimit = 1
-        configuration.preferredAssetRepresentationMode = .current
-        
-        // 建立選擇器
-        let picker = PHPickerViewController(configuration: configuration)
-        picker.delegate = self
-        picker.modalPresentationStyle = .formSheet
-        
-        // 在指定的controller上呈現
-        parentController.present(picker, animated: true)
-        
-        print("✅ CardCreationCoordinator: 相簿選擇器啟動完成")
-    }
     
     /// 處理 OCR 失敗情況
     func handleOCRFailure(with image: UIImage) {
@@ -507,27 +462,6 @@ extension CardCreationCoordinator: ContactEditViewControllerDelegate {
         }
     }
     
-    // MARK: - Photo Selection Delegate Methods
-    
-    func contactEditViewControllerDidRequestCameraPhoto(_ controller: ContactEditViewController) {
-        print("📸 CardCreationCoordinator: 用戶請求相機拍照")
-        
-        // 檢查權限並啟動相機
-        checkCameraPermissionAndProceed { [weak self] in
-            // 在編輯頁面之上present相機
-            self?.presentCameraFrom(controller)
-        }
-    }
-    
-    func contactEditViewControllerDidRequestLibraryPhoto(_ controller: ContactEditViewController) {
-        print("🖼️ CardCreationCoordinator: 用戶請求相簿選擇")
-        
-        // 檢查權限並啟動相簿選擇
-        checkPhotoLibraryPermissionAndProceed { [weak self] in
-            // 在編輯頁面之上present相簿選擇器
-            self?.presentPhotoLibraryFrom(controller)
-        }
-    }
 }
 
 // MARK: - PHPickerViewControllerDelegate
