@@ -15,10 +15,6 @@ protocol ContactEditViewControllerDelegate: AnyObject {
     
     // 新增：支援儲存成功後的選項處理
     func contactEditViewController(_ controller: ContactEditViewController, didSaveCard card: BusinessCard, shouldShowContinueOptions: Bool)
-    
-    // 新增：照片選擇委託方法
-    func contactEditViewControllerDidRequestCameraPhoto(_ controller: ContactEditViewController)
-    func contactEditViewControllerDidRequestLibraryPhoto(_ controller: ContactEditViewController)
 }
 
 class ContactEditViewController: BaseViewController {
@@ -38,7 +34,6 @@ class ContactEditViewController: BaseViewController {
     
     // Photo section
     private lazy var photoImageView = UIImageView()
-    private lazy var changePhotoButton = ThemedButton(style: .secondary)
     
     // Form fields
     private lazy var nameField = FormFieldView.makeName(required: true)
@@ -127,13 +122,7 @@ class ContactEditViewController: BaseViewController {
         photoImageView.image = UIImage(systemName: "person.fill")
         photoImageView.tintColor = AppTheme.Colors.placeholder
         
-        // Change photo button
-        changePhotoButton.setTitle("更換照片", for: .normal)
-        changePhotoButton.addTarget(self, action: #selector(changePhotoTapped), for: .touchUpInside)
-        
-        [photoImageView, changePhotoButton].forEach {
-            contentView.addSubview($0)
-        }
+        contentView.addSubview(photoImageView)
     }
     
     private func setupFormFields() {
@@ -210,12 +199,6 @@ class ContactEditViewController: BaseViewController {
             make.height.equalTo(130) // 名片比例約 1.54:1，調整高度
         }
         
-        changePhotoButton.snp.makeConstraints { make in
-            make.top.equalTo(photoImageView.snp.bottom).offset(AppTheme.Layout.standardPadding)
-            make.centerX.equalToSuperview()
-            make.width.equalTo(120)
-        }
-        
         // Form fields
         let formFields = [
             nameField, jobTitleField, companyField,
@@ -228,7 +211,7 @@ class ContactEditViewController: BaseViewController {
                 make.left.right.equalToSuperview().inset(AppTheme.Layout.standardPadding)
                 
                 if index == 0 {
-                    make.top.equalTo(changePhotoButton.snp.bottom).offset(AppTheme.Layout.sectionPadding)
+                    make.top.equalTo(photoImageView.snp.bottom).offset(AppTheme.Layout.sectionPadding)
                 } else {
                     make.top.equalTo(formFields[index - 1].snp.bottom).offset(AppTheme.Layout.standardPadding)
                 }
@@ -518,9 +501,6 @@ class ContactEditViewController: BaseViewController {
         // 更新表單欄位啟用狀態
         updateFormFieldsEnabled(isFormEnabled)
         
-        // 更新照片操作按鈕顯示
-        updatePhotoButtonsVisibility(isFormEnabled)
-        
         // 更新 NavigationBar
         updateNavigationBarForState()
     }
@@ -538,24 +518,6 @@ class ContactEditViewController: BaseViewController {
         addressField.isEditable = isEnabled
     }
     
-    /// 更新照片操作按鈕的顯示狀態
-    private func updatePhotoButtonsVisibility(_ isEnabled: Bool) {
-        // 檢視模式：隱藏照片操作按鈕
-        // 編輯模式：根據來源類型決定是否顯示（手動輸入顯示完整功能，其他限制更換）
-        let shouldShowPhotoButtons = isEnabled
-        
-        changePhotoButton.isHidden = !shouldShowPhotoButtons
-        
-        // 如果是編輯既有名片且不是手動輸入，可以考慮限制照片更換功能
-        if viewModel.isEditing && sourceType != .manual {
-            // 您提到的照片更換功能缺失，這裡可以進一步限制
-            changePhotoButton.isEnabled = false
-            changePhotoButton.setTitle("照片功能暫不可用", for: .normal)
-        } else {
-            changePhotoButton.isEnabled = shouldShowPhotoButtons
-            changePhotoButton.setTitle("更換照片", for: .normal)
-        }
-    }
     
     /// 更新 NavigationBar 按鈕
     private func updateNavigationBarForState() {
@@ -666,33 +628,6 @@ class ContactEditViewController: BaseViewController {
         viewModel.enterEditMode()
     }
     
-    @objc private func changePhotoTapped() {
-        let alertController = UIAlertController(
-            title: "選擇照片",
-            message: "請選擇照片來源",
-            preferredStyle: .actionSheet
-        )
-        
-        alertController.addAction(UIAlertAction(title: "相機", style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            self.delegate?.contactEditViewControllerDidRequestCameraPhoto(self)
-        })
-        
-        alertController.addAction(UIAlertAction(title: "相簿", style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            self.delegate?.contactEditViewControllerDidRequestLibraryPhoto(self)
-        })
-        
-        alertController.addAction(UIAlertAction(title: "取消", style: .cancel))
-        
-        // iPad support
-        if let popover = alertController.popoverPresentationController {
-            popover.sourceView = changePhotoButton
-            popover.sourceRect = changePhotoButton.bounds
-        }
-        
-        present(alertController, animated: true)
-    }
     
     
     // MARK: - Helper Methods
