@@ -280,8 +280,9 @@ enum AppTheme {
                 /// Cell 高度比例（螢幕高度的 12%）
                 static let cellHeightRatio: CGFloat = 0.12
                 
-                /// 圖片黃金比例（寬度 = 高度 / 0.618）
-                static let imageAspectRatio: CGFloat = 0.618
+                /// 圖片黃金比例（寬:高 = 1:0.618，即寬度 = 高度 × 1.618）
+                static let imageAspectRatio: CGFloat = 0.618  // 高度相對於寬度的比例
+                static let imageWidthToHeightRatio: CGFloat = 1.618  // 寬度相對於高度的比例（1 ÷ 0.618）
                 
                 /// 圖片與文字間距
                 static let imageToTextSpacing: CGFloat = 12
@@ -290,17 +291,68 @@ enum AppTheme {
                 static let nameToCompanySpacing: CGFloat = 6
                 static let companyToJobTitleSpacing: CGFloat = 4
                 
+                // MARK: - 響應式圖片占比優化
+                
+                /// 預設圖片區域占 Cell 內容寬度的比例
+                static let defaultImageAreaWidthRatio: CGFloat = 0.45
+                
+                /// 根據螢幕尺寸獲取最佳圖片寬度占比
+                static func getImageWidthRatio(for screenWidth: CGFloat) -> CGFloat {
+                    switch screenWidth {
+                    case 0..<375:     // 小螢幕 (iPhone SE, Mini)
+                        return 0.42   // 42% - 給文字更多空間
+                    case 375..<430:   // 標準螢幕 (iPhone 14, 15)
+                        return 0.45   // 45% - 平衡占比
+                    default:          // 大螢幕 (iPhone Pro Max)
+                        return 0.48   // 48% - 圖片可以稍大
+                    }
+                }
+                
                 /// 計算當前螢幕的最佳 Cell 高度
                 static func calculateCellHeight() -> CGFloat {
                     let screenHeight = UIScreen.main.bounds.height
                     return screenHeight * cellHeightRatio
                 }
                 
-                /// 計算圖片尺寸（基於 Cell 內容高度）
+                /// 計算圖片尺寸（基於 Cell 內容高度）- 舊版方法，保持向後相容
                 static func calculateImageSize(cellContentHeight: CGFloat) -> CGSize {
                     let imageHeight = cellContentHeight
-                    let imageWidth = imageHeight / imageAspectRatio
+                    let imageWidth = imageHeight * imageWidthToHeightRatio  // 寬度 = 高度 × 1.618
                     return CGSize(width: imageWidth, height: imageHeight)
+                }
+                
+                /// 計算響應式優化的圖片尺寸（新版方法）
+                /// 基於螢幕尺寸和 Cell 寬度，提供更好的名片顯示效果
+                static func calculateResponsiveImageSize(
+                    cellContentHeight: CGFloat,
+                    cellContentWidth: CGFloat,
+                    screenWidth: CGFloat
+                ) -> CGSize {
+                    // 根據螢幕尺寸獲取最佳圖片寬度占比
+                    let widthRatio = getImageWidthRatio(for: screenWidth)
+                    
+                    // 計算目標圖片寬度
+                    let targetImageWidth = cellContentWidth * widthRatio
+                    
+                    // 根據黃金比例計算對應的高度（寬:高 = 1:0.618）
+                    let imageHeightFromWidth = targetImageWidth * imageAspectRatio
+                    
+                    // 確保不超過 Cell 高度（遵循設計規範）
+                    let maxImageHeight = cellContentHeight
+                    let finalImageHeight = min(imageHeightFromWidth, maxImageHeight)
+                    
+                    // 重新計算寬度，確保比例正確（寬度 = 高度 × 1.618）
+                    let finalImageWidth = finalImageHeight * imageWidthToHeightRatio
+                    
+                    return CGSize(width: finalImageWidth, height: finalImageHeight)
+                }
+                
+                /// 計算文字區域可用寬度
+                static func calculateTextAreaWidth(
+                    cellContentWidth: CGFloat,
+                    imageWidth: CGFloat
+                ) -> CGFloat {
+                    return cellContentWidth - imageWidth - imageToTextSpacing
                 }
             }
         }

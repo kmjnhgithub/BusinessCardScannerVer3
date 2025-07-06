@@ -60,16 +60,22 @@ class BusinessCardCell: UITableViewCell {
         cardImageView.backgroundColor = AppTheme.Colors.secondaryBackground
         cardImageView.layer.cornerRadius = 8
         cardImageView.layer.masksToBounds = true
+        cardImageView.clipsToBounds = true  // 確保圖片完全填滿容器
         
         // 姓名標籤 - 使用專用名片姓名字型（18pt, Semibold）
         nameLabel.font = AppTheme.Fonts.cardName
         nameLabel.textColor = AppTheme.Colors.primaryText
         nameLabel.numberOfLines = 1
+        nameLabel.adjustsFontSizeToFitWidth = true
+        nameLabel.minimumScaleFactor = 0.8
         
         // 公司標籤 - 使用專用公司名稱字型（16pt, Regular）
         companyLabel.font = AppTheme.Fonts.companyName
         companyLabel.textColor = AppTheme.Colors.secondaryText
-        companyLabel.numberOfLines = 1
+        companyLabel.numberOfLines = 0  // 允許多行顯示
+        companyLabel.lineBreakMode = .byTruncatingTail
+        companyLabel.setContentHuggingPriority(.defaultLow, for: .vertical)
+        companyLabel.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
         
         // 職稱標籤 - 使用專用職稱字型（14pt, Regular）
         jobTitleLabel.font = AppTheme.Fonts.jobTitle
@@ -87,9 +93,20 @@ class BusinessCardCell: UITableViewCell {
     private func setupConstraints() {
         // 計算響應式尺寸
         let cellHeight = AppTheme.Layout.ResponsiveLayout.CardList.calculateCellHeight()
-        let verticalMargin: CGFloat = 8
+        let verticalMargin: CGFloat = 8  // 縮短容器邊距
         let containerHeight = cellHeight - (verticalMargin * 2)
-        let imageSize = AppTheme.Layout.ResponsiveLayout.CardList.calculateImageSize(cellContentHeight: containerHeight)
+        let containerPadding: CGFloat = 2  // 縮短容器內邊距
+        
+        // 獲取螢幕和容器尺寸資訊
+        let screenWidth = UIScreen.main.bounds.width
+        let containerWidth = screenWidth - (AppTheme.Layout.standardPadding * 2)
+        
+        // 使用新的響應式圖片尺寸計算方法
+        let imageSize = AppTheme.Layout.ResponsiveLayout.CardList.calculateResponsiveImageSize(
+            cellContentHeight: containerHeight,
+            cellContentWidth: containerWidth,
+            screenWidth: screenWidth
+        )
         
         // 容器視圖約束（響應式高度）
         containerView.snp.makeConstraints { make in
@@ -99,33 +116,36 @@ class BusinessCardCell: UITableViewCell {
             make.height.equalTo(containerHeight) // 動態計算高度
         }
         
-        // 名片圖片約束（黃金比例，左貼齊）
+        // 名片圖片約束（響應式尺寸，左貼齊）
         cardImageView.snp.makeConstraints { make in
             make.left.equalToSuperview() // 左貼齊容器，無間距
-            make.top.bottom.equalToSuperview() // 與容器高度完全貼合
-            make.width.equalTo(imageSize.width) // 黃金比例寬度
+            make.centerY.equalToSuperview() // 垂直居中
+            make.width.equalTo(imageSize.width) // 響應式計算的寬度
+            make.height.equalTo(imageSize.height) // 響應式計算的高度
         }
         
-        // 姓名標籤約束
+        // 姓名標籤約束（上半部 1/2 區域）
         nameLabel.snp.makeConstraints { make in
             make.left.equalTo(cardImageView.snp.right).offset(AppTheme.Layout.ResponsiveLayout.CardList.imageToTextSpacing)
-            make.right.equalToSuperview().inset(AppTheme.Layout.standardPadding)
-            make.top.equalToSuperview().offset(AppTheme.Layout.standardPadding)
+            make.right.equalToSuperview().inset(containerPadding)
+            make.top.equalToSuperview().offset(containerPadding)
+            make.height.equalToSuperview().multipliedBy(0.5).offset(-containerPadding / 2)
         }
         
-        // 公司標籤約束
+        // 公司標籤約束（下半部主要區域）
         companyLabel.snp.makeConstraints { make in
             make.left.equalTo(nameLabel)
             make.right.equalTo(nameLabel)
-            make.top.equalTo(nameLabel.snp.bottom).offset(AppTheme.Layout.ResponsiveLayout.CardList.nameToCompanySpacing)
+            make.top.equalTo(containerView.snp.centerY).offset(containerPadding / 2)
+            make.bottom.equalTo(jobTitleLabel.snp.top).offset(-2)
         }
         
-        // 職稱標籤約束
+        // 職稱標籤約束（下半部底部，固定高度）
         jobTitleLabel.snp.makeConstraints { make in
             make.left.equalTo(nameLabel)
             make.right.equalTo(nameLabel)
-            make.top.equalTo(companyLabel.snp.bottom).offset(AppTheme.Layout.ResponsiveLayout.CardList.companyToJobTitleSpacing)
-            make.bottom.lessThanOrEqualToSuperview().inset(AppTheme.Layout.standardPadding)
+            make.bottom.equalToSuperview().offset(-containerPadding)
+            make.height.equalTo(18) // 固定高度，確保顯示
         }
     }
     
@@ -162,20 +182,17 @@ class BusinessCardCell: UITableViewCell {
         
         // 嘗試載入縮圖
         if let thumbnail = photoService.loadThumbnail(path: photoPath) {
-            cardImageView.image = thumbnail
-            cardImageView.contentMode = .scaleAspectFill
+            setBusinessCardImage(thumbnail)
         } else {
             // 縮圖載入失敗，嘗試載入原圖並產生縮圖
             if let fullImage = photoService.loadPhoto(path: photoPath) {
                 // 產生縮圖並設定
                 let thumbnailSize = CGSize(width: 168, height: 168) // @3x for 56pt
                 if let thumbnail = photoService.generateThumbnail(from: fullImage, size: thumbnailSize) {
-                    cardImageView.image = thumbnail
-                    cardImageView.contentMode = .scaleAspectFill
+                    setBusinessCardImage(thumbnail)
                 } else {
                     // 縮圖生成失敗，直接使用原圖
-                    cardImageView.image = fullImage
-                    cardImageView.contentMode = .scaleAspectFill
+                    setBusinessCardImage(fullImage)
                 }
             } else {
                 // 圖片載入完全失敗，顯示預設圖示
@@ -188,7 +205,14 @@ class BusinessCardCell: UITableViewCell {
     private func setDefaultImage() {
         cardImageView.image = UIImage(systemName: "person.crop.rectangle")
         cardImageView.tintColor = AppTheme.Colors.secondaryText
-        cardImageView.contentMode = .scaleAspectFit
+        cardImageView.contentMode = .scaleAspectFit  // 預設圖示使用 fit 模式
+    }
+    
+    /// 設定實際名片圖片
+    private func setBusinessCardImage(_ image: UIImage) {
+        cardImageView.image = image
+        cardImageView.contentMode = .scaleAspectFill  // 名片圖片使用 fill 模式完全填滿
+        cardImageView.tintColor = nil  // 清除 tint color
     }
     
     // MARK: - Cell Lifecycle

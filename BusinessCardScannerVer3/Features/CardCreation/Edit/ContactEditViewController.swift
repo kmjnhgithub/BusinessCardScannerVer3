@@ -114,12 +114,15 @@ class ContactEditViewController: BaseViewController {
     }
     
     private func setupPhotoSection() {
-        // Photo image view
-        photoImageView.contentMode = .scaleAspectFill
-        photoImageView.clipsToBounds = true
-        photoImageView.layer.cornerRadius = AppTheme.Layout.cornerRadius
+        // Photo image view - 與 BusinessCardCell 保持一致的設定
         photoImageView.backgroundColor = AppTheme.Colors.cardBackground
+        photoImageView.layer.cornerRadius = AppTheme.Layout.cornerRadius
+        photoImageView.layer.masksToBounds = true
+        photoImageView.clipsToBounds = true  // 確保圖片完全填滿容器
+        
+        // 初始狀態：顯示預設圖示
         photoImageView.image = UIImage(systemName: "person.fill")
+        photoImageView.contentMode = .scaleAspectFit
         photoImageView.tintColor = AppTheme.Colors.placeholder
         
         contentView.addSubview(photoImageView)
@@ -191,12 +194,19 @@ class ContactEditViewController: BaseViewController {
             make.width.equalToSuperview()
         }
         
-        // Photo section - 增大照片顯示區域
+        // Photo section - 響應式照片區域（基於螢幕寬度）
         photoImageView.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(AppTheme.Layout.standardPadding)
             make.centerX.equalToSuperview()
-            make.width.equalTo(200)  // 增加寬度以更好顯示名片
-            make.height.equalTo(130) // 名片比例約 1.54:1，調整高度
+            
+            // 響應式寬度：螢幕寬度減去標準邊距
+            let screenWidth = UIScreen.main.bounds.width
+            let photoWidth = screenWidth - (AppTheme.Layout.standardPadding * 4) // 留更多邊距
+            make.width.equalTo(photoWidth)
+            
+            // 高度根據黃金比例計算（與 BusinessCardCell 一致）
+            let photoHeight = photoWidth * AppTheme.Layout.ResponsiveLayout.CardList.imageAspectRatio
+            make.height.equalTo(photoHeight)
         }
         
         // Form fields
@@ -451,20 +461,30 @@ class ContactEditViewController: BaseViewController {
         print("📷 ContactEditViewController: 更新照片 UI")
         
         if let photo = photo {
-            print("✅ 設置照片，尺寸: \(photo.size)")
-            photoImageView.image = photo
-            photoImageView.contentMode = .scaleAspectFill
-            photoImageView.tintColor = nil  // 清除 tint color
+            print("✅ 設置名片照片，尺寸: \(photo.size)")
+            setBusinessCardPhoto(photo)
         } else {
             print("⚠️ 設置預設照片圖示")
-            photoImageView.image = UIImage(systemName: "person.fill")
-            photoImageView.contentMode = .scaleAspectFit
-            photoImageView.tintColor = AppTheme.Colors.placeholder
+            setDefaultPhotoIcon()
         }
         
         // 強制重新布局確保照片顯示正確
         photoImageView.setNeedsLayout()
         photoImageView.layoutIfNeeded()
+    }
+    
+    /// 設定實際名片照片（與 BusinessCardCell 邏輯一致）
+    private func setBusinessCardPhoto(_ photo: UIImage) {
+        photoImageView.image = photo
+        photoImageView.contentMode = .scaleAspectFill  // 名片照片完全填滿容器
+        photoImageView.tintColor = nil  // 清除 tint color
+    }
+    
+    /// 設定預設照片圖示
+    private func setDefaultPhotoIcon() {
+        photoImageView.image = UIImage(systemName: "person.fill")
+        photoImageView.contentMode = .scaleAspectFit  // 預設圖示適應容器
+        photoImageView.tintColor = AppTheme.Colors.placeholder
     }
     
     private func updateValidationErrors(_ errors: [String: String]) {
