@@ -483,7 +483,7 @@ private class LoadingContainerView: ThemedView {
         }
         
         progressView.snp.makeConstraints { make in
-            make.width.equalTo(150)
+            make.width.equalToSuperview().multipliedBy(0.75)  // 父視圖寬度的 75%
             make.height.equalTo(4)
         }
     }

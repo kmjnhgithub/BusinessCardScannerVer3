@@ -91,11 +91,19 @@ class CardCreationCoordinator: BaseCoordinator {
         temporaryPhoto = image
         
         print("📱 CardCreationCoordinator: 呼叫 BusinessCardService.processImage")
+        
+        // 顯示載入指示器
+        LoadingPresenter.shared.showProgress(message: "AI 智慧解析中...")
+        
         // 使用 BusinessCardService 處理圖片
         dependencies.businessCardService.processImage(image)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] result in
                 print("📱 CardCreationCoordinator: 收到 BusinessCardService 處理結果")
+                
+                // 隱藏載入指示器
+                LoadingPresenter.shared.hide()
+                
                 switch result {
                 case .success(let parsedData, let croppedImage):
                     print("✅ 圖片處理成功，顯示編輯表單（使用裁切後的圖片）")

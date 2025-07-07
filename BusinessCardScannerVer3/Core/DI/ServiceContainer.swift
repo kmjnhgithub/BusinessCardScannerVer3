@@ -55,7 +55,8 @@ final class ServiceContainer {
             repository: businessCardRepository,
             photoService: photoService,
             visionService: visionService,
-            parser: businessCardParser
+            parser: businessCardParser,
+            aiCardParser: aiCardParser
         )
     }()
     

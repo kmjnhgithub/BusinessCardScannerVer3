@@ -30,15 +30,18 @@ class BusinessCardService: BusinessCardServiceProtocol {
     private let photoService: PhotoService
     private let visionService: VisionService
     private let parser: BusinessCardParser
+    private let aiCardParser: AICardParser
     
     init(repository: BusinessCardRepository,
          photoService: PhotoService,
          visionService: VisionService,
-         parser: BusinessCardParser) {
+         parser: BusinessCardParser,
+         aiCardParser: AICardParser) {
         self.repository = repository
         self.photoService = photoService
         self.visionService = visionService
         self.parser = parser
+        self.aiCardParser = aiCardParser
     }
     
     // MARK: - Image Processing Pipeline
@@ -74,8 +77,12 @@ class BusinessCardService: BusinessCardServiceProtocol {
                                 print("   \(key): \(value)")
                             }
                             
-                            let parsedData = self.parser.parse(ocrResult: ocrProcessingResult)
-                            promise(.success(BusinessCardProcessingResult.success(parsedData, croppedImage: businessCardResult.croppedImage)))
+                            // 檢查 AI 是否可用且已啟用
+                            self.processWithAIOrFallback(
+                                ocrResult: ocrProcessingResult,
+                                croppedImage: businessCardResult.croppedImage,
+                                promise: promise
+                            )
                             
                         case .failure(let error):
                             print("❌ OCR 處理失敗: \(error.localizedDescription)")
@@ -90,8 +97,12 @@ class BusinessCardService: BusinessCardServiceProtocol {
                     ocrProcessor.processImage(image) { ocrResult in
                         switch ocrResult {
                         case .success(let ocrProcessingResult):
-                            let parsedData = self.parser.parse(ocrResult: ocrProcessingResult)
-                            promise(.success(BusinessCardProcessingResult.success(parsedData, croppedImage: image)))
+                            // 檢查 AI 是否可用且已啟用
+                            self.processWithAIOrFallback(
+                                ocrResult: ocrProcessingResult,
+                                croppedImage: image,
+                                promise: promise
+                            )
                         case .failure(let ocrError):
                             promise(.success(BusinessCardProcessingResult.processingFailed(ocrError)))
                         }
@@ -183,6 +194,84 @@ class BusinessCardService: BusinessCardServiceProtocol {
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Private Methods
+    
+    /// 檢查 AI 是否可用並處理，失敗時降級到本地解析
+    /// - Parameters:
+    ///   - ocrResult: OCR 處理結果
+    ///   - croppedImage: 裁切後的圖片
+    ///   - promise: 結果回調
+    private func processWithAIOrFallback(
+        ocrResult: OCRProcessingResult,
+        croppedImage: UIImage,
+        promise: @escaping (Result<BusinessCardProcessingResult, Never>) -> Void
+    ) {
+        // 檢查 AI 是否可用且已啟用
+        let isAIEnabled = UserDefaults.standard.bool(forKey: "aiProcessingEnabled")
+        
+        if isAIEnabled && aiCardParser.isAvailable {
+            print("🤖 BusinessCardService: 使用 AI 智慧解析")
+            
+            // 建立 AI 處理請求
+            let aiRequest = AIProcessingRequest(
+                ocrText: ocrResult.preprocessedText,
+                imageData: croppedImage.pngData()
+            )
+            
+            // 使用 AI 解析
+            aiCardParser.parseCard(request: aiRequest)
+                .receive(on: DispatchQueue.main)
+                .sink(
+                    receiveCompletion: { [weak self] completion in
+                        if case .failure(let error) = completion {
+                            print("⚠️ AI 解析失敗: \(error.localizedDescription)，降級使用本地解析")
+                            // AI 失敗，降級到本地解析
+                            self?.fallbackToLocalParsing(
+                                ocrResult: ocrResult,
+                                croppedImage: croppedImage,
+                                parseSource: .local,
+                                promise: promise
+                            )
+                        }
+                    },
+                    receiveValue: { parsedData in
+                        print("✅ AI 解析成功")
+                        // 更新解析來源為 AI
+                        var aiParsedData = parsedData
+                        aiParsedData.source = .ai
+                        promise(.success(.success(aiParsedData, croppedImage: croppedImage)))
+                    }
+                )
+                .store(in: &cancellables)
+        } else {
+            print("📝 BusinessCardService: 使用本地解析（AI 未啟用或不可用）")
+            // 直接使用本地解析
+            fallbackToLocalParsing(
+                ocrResult: ocrResult,
+                croppedImage: croppedImage,
+                parseSource: .local,
+                promise: promise
+            )
+        }
+    }
+    
+    /// 使用本地解析器處理
+    /// - Parameters:
+    ///   - ocrResult: OCR 處理結果
+    ///   - croppedImage: 裁切後的圖片
+    ///   - parseSource: 解析來源標記
+    ///   - promise: 結果回調
+    private func fallbackToLocalParsing(
+        ocrResult: OCRProcessingResult,
+        croppedImage: UIImage,
+        parseSource: ParsedCardData.ParseSource,
+        promise: @escaping (Result<BusinessCardProcessingResult, Never>) -> Void
+    ) {
+        var parsedData = parser.parse(ocrResult: ocrResult)
+        parsedData.source = parseSource
+        promise(.success(.success(parsedData, croppedImage: croppedImage)))
+    }
 }
 
 // MARK: - Business Card Error Types
