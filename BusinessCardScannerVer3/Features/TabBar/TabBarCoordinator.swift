@@ -22,7 +22,7 @@ final class TabBarCoordinator: BaseCoordinator {
     
     // MARK: - Child Coordinators (internal for testing)
     var cardListCoordinator: CardListCoordinator?
-    // Note: settingsCoordinator not implemented yet (placeholder used)
+    var settingsCoordinator: SettingsCoordinator?
     
     // MARK: - Types
     
@@ -183,27 +183,16 @@ final class TabBarCoordinator: BaseCoordinator {
         // 創建導航控制器
         let navigationController = UINavigationController()
         
-        // 未來實作：創建 Settings 協調器
-        // let coordinator = moduleFactory.makeSettingsCoordinator(navigationController: navigationController)
-        // coordinator.start()
+        // 創建 Settings 協調器並啟動
+        let settingsModule = moduleFactory.makeSettingsModule()
+        let coordinator = settingsModule.makeCoordinator(navigationController: navigationController)
+        coordinator.start()
         
-        // 目前使用占位視圖控制器
-        let placeholderVC = PlaceholderViewController(
-            moduleTitle: "應用設定",
-            description: "管理應用程式設定、資料匯出和儲存空間，以及 AI 服務配置。",
-            phase: "Phase 7 (Task 7.2-7.3)",
-            features: [
-                "AI 服務設定（OpenAI API Key）",
-                "資料匯出（CSV/vCard 格式）",
-                "儲存空間管理",
-                "清除所有資料",
-                "應用程式關於資訊",
-                "使用統計查看"
-            ],
-            icon: TabIndex.settings.icon
-        )
+        // 將協調器添加到子協調器中管理生命週期
+        addChild(coordinator)
         
-        navigationController.setViewControllers([placeholderVC], animated: false)
+        // 儲存協調器引用供測試使用
+        settingsCoordinator = coordinator as? SettingsCoordinator
         
         // 設定 Tab Bar Item
         setupTabBarItem(for: navigationController, tabIndex: .settings)
