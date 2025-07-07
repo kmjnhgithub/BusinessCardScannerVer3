@@ -23,8 +23,8 @@ class CardListViewModel: BaseViewModel {
     
     // isLoading 繼承自 BaseViewModel，不需要重新宣告
     
-    /// 是否為空狀態
-    @Published var isEmpty: Bool = true
+    /// 是否應該顯示空狀態視圖 (考慮載入和錯誤狀態)
+    @Published var shouldShowEmptyState: Bool = false
     
     // MARK: - Private Properties
     
@@ -38,7 +38,7 @@ class CardListViewModel: BaseViewModel {
         super.init()
         
         setupBindings()
-        loadCardsFromRepository() // 載入真實資料
+        loadCards() // 載入真實資料
     }
     
     // MARK: - Setup
@@ -54,32 +54,31 @@ class CardListViewModel: BaseViewModel {
             .receive(on: DispatchQueue.main)
             .assign(to: &$filteredCards)
         
-        // 監聽過濾結果變化，更新空狀態
-        $filteredCards
-            .map { $0.isEmpty }
-            .assign(to: &$isEmpty)
+        // 計算是否應該顯示空狀態：必須同時滿足 (!isLoading && !hasError && filteredCards.isEmpty)
+        Publishers.CombineLatest3($isLoading, hasErrorPublisher, $filteredCards)
+            .map(calculateEmptyState)
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$shouldShowEmptyState)
     }
     
     // MARK: - Public Methods
     
     /// 載入名片資料（從資料庫）
     func loadCards() {
-        loadCardsFromRepository()
-    }
-    
-    /// 從 Repository 載入名片資料
-    func loadCardsFromRepository() {
-        isLoading = true
+        startLoading() // 使用 BaseViewModel 的載入狀態管理
         
         repository.fetchAll()
             .sink(
                 receiveCompletion: { [weak self] completion in
                     DispatchQueue.main.async {
-                        self?.isLoading = false
+                        self?.stopLoading()
                         if case .failure(let error) = completion {
                             print("❌ 載入名片失敗: \(error.localizedDescription)")
                             // 如果資料庫載入失敗，載入假資料以避免空白畫面
                             self?.generateMockData()
+                            self?.clearError() // 載入假資料後清除錯誤狀態
+                        } else {
+                            self?.clearError()
                         }
                     }
                 },
@@ -125,7 +124,7 @@ class CardListViewModel: BaseViewModel {
                         print("❌ 刪除名片失敗: \(error.localizedDescription)")
                         // 重新載入資料以恢復正確狀態
                         DispatchQueue.main.async {
-                            self?.loadCardsFromRepository()
+                            self?.loadCards()
                             // 可以在這裡添加錯誤提示給使用者
                         }
                     }
@@ -160,7 +159,7 @@ class CardListViewModel: BaseViewModel {
         
         // 修復：下拉刷新應該重新從資料庫載入，而不是生成 mock 資料
         // 這樣可以確保顯示用戶最新儲存的資料
-        loadCardsFromRepository()
+        loadCards()
     }
     
     /// 處理新增名片請求
@@ -171,6 +170,16 @@ class CardListViewModel: BaseViewModel {
     }
     
     // MARK: - Private Methods
+    
+    /// 計算空狀態顯示邏輯（可測試的純函數）
+    /// - Parameters:
+    ///   - isLoading: 是否正在載入
+    ///   - hasError: 是否有錯誤
+    ///   - filteredCards: 過濾後的名片陣列
+    /// - Returns: 是否應該顯示空狀態
+    private func calculateEmptyState(isLoading: Bool, hasError: Bool, filteredCards: [BusinessCard]) -> Bool {
+        return !isLoading && !hasError && filteredCards.isEmpty
+    }
     
     /// 過濾名片資料
     /// - Parameters:
@@ -333,9 +342,38 @@ class CardListViewModel: BaseViewModel {
     }
 }
 
-// MARK: - Mock Data Helpers
+// MARK: - Mock Data Helpers (Debug Only)
 
+#if DEBUG
 extension CardListViewModel {
+    
+    // MARK: - Testing Helpers
+    
+    /// 測試專用狀態重置
+    func resetForTesting() {
+        cards = []
+        searchText = ""
+        isLoading = false
+        error = nil
+        shouldLoadMockDataOnEmpty = false
+    }
+    
+    /// 測試專用狀態設定
+    func setTestState(cards: [BusinessCard], isLoading: Bool = false, error: Error? = nil) {
+        self.cards = cards
+        self.isLoading = isLoading
+        self.error = error
+    }
+    
+    /// 暴露私有方法供測試使用
+    func testCalculateEmptyState(isLoading: Bool, hasError: Bool, filteredCards: [BusinessCard]) -> Bool {
+        return calculateEmptyState(isLoading: isLoading, hasError: hasError, filteredCards: filteredCards)
+    }
+    
+    /// 暴露私有方法供測試使用
+    func testFilterCards(_ cards: [BusinessCard], with searchText: String) -> [BusinessCard] {
+        return filterCards(cards, with: searchText)
+    }
     
     /// 清除所有資料（測試用）
     func clearAllData() {
@@ -364,3 +402,4 @@ extension CardListViewModel {
         cards.append(newCard)
     }
 }
+#endif

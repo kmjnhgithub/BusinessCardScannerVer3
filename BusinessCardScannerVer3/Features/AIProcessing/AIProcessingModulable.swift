@@ -19,3 +19,9 @@ protocol AIProcessingModuleOutput: AnyObject {
     func aiProcessingDidComplete(with data: ParsedCardData)
     func aiProcessingDidFail(with error: Error)
 }
+
+// MARK: - AI Settings Module Interface
+
+protocol AISettingsModulable {
+    func makeViewController() -> UIViewController
+}

@@ -8,7 +8,8 @@
       "Bash(ls:*)",
       "Bash(gemini:*)",
       "Bash(mkdir:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

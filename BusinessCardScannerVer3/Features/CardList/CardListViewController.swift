@@ -200,7 +200,15 @@ class CardListViewController: BaseViewController {
         viewModel.$filteredCards
             .receive(on: DispatchQueue.main)
             .sink { [weak self] cards in
-                self?.updateUI(with: cards)
+                self?.updateTableView(with: cards)
+            }
+            .store(in: &cancellables)
+        
+        // 訂閱空狀態顯示
+        viewModel.$shouldShowEmptyState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] shouldShow in
+                self?.updateEmptyState(shouldShow)
             }
             .store(in: &cancellables)
         
@@ -225,13 +233,36 @@ class CardListViewController: BaseViewController {
     
     // MARK: - UI Updates
     
-    private func updateUI(with cards: [BusinessCard]) {
-        let isEmpty = cards.isEmpty
-        tableView.isHidden = isEmpty
-        emptyStateView.isHidden = !isEmpty
+    /// 更新表格視圖
+    private func updateTableView(with cards: [BusinessCard]) {
+        let hasCards = !cards.isEmpty
+        tableView.isHidden = !hasCards
         
-        if !isEmpty {
+        if hasCards {
             tableView.reloadData()
+        }
+    }
+    
+    /// 更新空狀態視圖顯示 (帶動畫)
+    private func updateEmptyState(_ shouldShow: Bool) {
+        // 如果狀態沒有變化，不執行動畫
+        guard emptyStateView.isHidden == shouldShow else { return }
+        
+        if shouldShow {
+            // 顯示空狀態：先設為可見，再執行淡入動畫
+            emptyStateView.alpha = 0
+            emptyStateView.isHidden = false
+            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
+                self.emptyStateView.alpha = 1
+            }
+        } else {
+            // 隱藏空狀態：執行淡出動畫，再設為隱藏
+            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseIn, animations: {
+                self.emptyStateView.alpha = 0
+            }) { _ in
+                self.emptyStateView.isHidden = true
+                self.emptyStateView.alpha = 1 // 重置 alpha 值
+            }
         }
     }
     
@@ -371,6 +402,33 @@ extension CardListViewController {
     /// 從 Repository 重新載入資料（由 AppCoordinator 調用）
     func refreshDataFromRepository() {
         print("🔄 CardListViewController: 收到重新載入請求")
-        viewModel.loadCardsFromRepository()
+        viewModel.loadCards()
     }
 }
+
+// MARK: - Testing Helpers
+
+#if DEBUG
+extension CardListViewController {
+    
+    /// 測試專用：檢查 EmptyStateView 是否可見
+    var isEmptyStateVisible: Bool {
+        return !emptyStateView.isHidden && emptyStateView.alpha > 0
+    }
+    
+    /// 測試專用：檢查 TableView 是否可見
+    var isTableViewVisible: Bool {
+        return !tableView.isHidden
+    }
+    
+    /// 測試專用：取得當前顯示的 Cell 數量
+    var visibleCellCount: Int {
+        return tableView.visibleCells.count
+    }
+    
+    /// 測試專用：模擬下拉刷新
+    func simulatePullToRefresh() {
+        refreshControlValueChanged()
+    }
+}
+#endif

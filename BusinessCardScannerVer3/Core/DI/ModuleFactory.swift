@@ -89,6 +89,11 @@ final class ModuleFactory {
         )
     }
     
+    /// 建立 AI 設定模組
+    func makeAISettingsModule() -> AISettingsModulable {
+        return AISettingsModule(openAIService: serviceContainer.openAIService)
+    }
+    
     // MARK: - Settings Module
     
     /// 建立設定模組
@@ -179,8 +184,24 @@ private struct SettingsModule: SettingsModulable {
     let aiProcessingModule: AIProcessingModulable?
     
     func makeCoordinator(navigationController: UINavigationController) -> Coordinator {
-        // 實際實作會在 Features/Settings/SettingsCoordinator.swift
-        return PlaceholderCoordinator(navigationController: navigationController)
+        // 使用真正的 SettingsCoordinator
+        return SettingsCoordinator(
+            navigationController: navigationController,
+            repository: repository,
+            exportService: exportService,
+            aiProcessingModule: aiProcessingModule,
+            moduleFactory: ModuleFactory()
+        )
+    }
+}
+
+private struct AISettingsModule: AISettingsModulable {
+    let openAIService: OpenAIService
+    
+    func makeViewController() -> UIViewController {
+        let viewModel = AISettingsViewModel(openAIService: openAIService)
+        let viewController = AISettingsViewController(viewModel: viewModel)
+        return UINavigationController(rootViewController: viewController)
     }
 }
 

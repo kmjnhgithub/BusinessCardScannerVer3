@@ -113,7 +113,7 @@ class BusinessCardCell: UITableViewCell {
             make.top.equalToSuperview().offset(verticalMargin)
             make.left.right.equalToSuperview().inset(AppTheme.Layout.standardPadding)
             make.bottom.equalToSuperview().offset(-verticalMargin)
-            make.height.equalTo(containerHeight) // 動態計算高度
+            // height 由 top + bottom 約束自然決定，避免過度約束
         }
         
         // 名片圖片約束（響應式尺寸，左貼齊）

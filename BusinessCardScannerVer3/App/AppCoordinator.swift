@@ -54,6 +54,7 @@ final class AppCoordinator: BaseCoordinator {
         
         // 這裡可以初始化需要在啟動時設定的服務
         // 例如：分析工具、推播通知等
+        
     }
     
     /// 設定應用程式外觀，強制使用 Light Mode
