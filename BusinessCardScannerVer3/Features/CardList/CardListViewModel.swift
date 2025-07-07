@@ -110,18 +110,37 @@ class CardListViewModel: BaseViewModel {
     /// 刪除名片
     /// - Parameter card: 要刪除的名片
     func deleteCard(_ card: BusinessCard) {
-        // 立即從記憶體陣列中移除，讓 UI 馬上更新
+        // 1. 立即從記憶體陣列中移除，讓 UI 馬上更新
         cards.removeAll { $0.id == card.id }
         
         // 立即同步更新 filteredCards，避免 TableView 崩潰
         filteredCards.removeAll { $0.id == card.id }
         
-        // TODO: Task 3.3 - 整合真實的資料庫刪除
-        // 模擬後台刪除操作（不影響 UI）
-        DispatchQueue.global(qos: .background).async {
-            // 這裡可以執行實際的資料庫刪除操作
-            print("✅ 已刪除名片: \(card.name)")
-        }
+        // 2. 執行資料庫刪除（使用 Combine）
+        repository.delete(card)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure(let error) = completion {
+                        // 刪除失敗時恢復資料並提示錯誤
+                        print("❌ 刪除名片失敗: \(error.localizedDescription)")
+                        // 重新載入資料以恢復正確狀態
+                        DispatchQueue.main.async {
+                            self?.loadCardsFromRepository()
+                            // 可以在這裡添加錯誤提示給使用者
+                        }
+                    }
+                },
+                receiveValue: { [weak self] _ in
+                    // 3. 刪除成功後，刪除對應的照片檔案
+                    if let photoPath = card.photoPath {
+                        let photoService = ServiceContainer.shared.photoService
+                        _ = photoService.deletePhoto(path: photoPath)
+                        print("🗑️ 已刪除照片: \(photoPath)")
+                    }
+                    print("✅ 已成功刪除名片: \(card.name)")
+                }
+            )
+            .store(in: &cancellables)
     }
     
     /// 刪除指定索引的名片（用於滑動刪除）
