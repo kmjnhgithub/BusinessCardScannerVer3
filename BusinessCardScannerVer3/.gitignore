@@ -97,6 +97,10 @@ UserData/
 *.tmp
 *.temp
 
+# Claude Code 設定檔案 (包含個人設定和指令)
+.claude/
+.claude/**
+
 CLAUDE.md
 測試指南.md
 Requirements/
