@@ -3,7 +3,6 @@
 //  BusinessCardScanner
 //
 //  統一樣式的多行文字輸入元件
-//  位置：Core/Common/UI/Components/base/ThemedTextView.swift
 //
 
 import UIKit

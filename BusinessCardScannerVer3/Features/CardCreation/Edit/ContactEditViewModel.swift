@@ -5,9 +5,9 @@
 //  Created by Claude Code on 2025/7/2.
 //
 
-import UIKit
 import Foundation
 import Combine
+import UIKit  // 僅用於 UIImage 資料類型
 
 enum ContactEditError: LocalizedError {
     case invalidEmail
@@ -39,6 +39,7 @@ class ContactEditViewModel: BaseViewModel {
     private let repository: BusinessCardRepository
     private let photoService: PhotoService
     private let businessCardService: BusinessCardService
+    private let validationService: ValidationService
     
     private let existingCard: BusinessCard?
     private var originalCardData: ParsedCardData
@@ -77,6 +78,7 @@ class ContactEditViewModel: BaseViewModel {
     init(repository: BusinessCardRepository,
          photoService: PhotoService,
          businessCardService: BusinessCardService,
+         validationService: ValidationService,
          existingCard: BusinessCard? = nil,
          initialData: ParsedCardData? = nil,
          initialPhoto: UIImage? = nil) {
@@ -84,6 +86,7 @@ class ContactEditViewModel: BaseViewModel {
         self.repository = repository
         self.photoService = photoService
         self.businessCardService = businessCardService
+        self.validationService = validationService
         self.existingCard = existingCard
         
         // Initialize data
@@ -289,23 +292,15 @@ class ContactEditViewModel: BaseViewModel {
     }
     
     private func isValidEmail(_ email: String) -> Bool {
-        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
-        let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
-        return emailPredicate.evaluate(with: email)
+        return validationService.validateEmail(email)
     }
     
     private func isValidPhone(_ phone: String) -> Bool {
-        // 支援手機和電話號碼的驗證規則，包含分機號碼和國際格式
-        let phoneRegex = "^[\\d\\s\\-\\+\\(\\)#]{8,25}$"  // 支援#分機號碼，增加長度限制
-        let phonePredicate = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
-        return phonePredicate.evaluate(with: phone)
+        return validationService.validatePhone(phone)
     }
     
     private func isValidWebsite(_ website: String) -> Bool {
-        if let url = URL(string: website.hasPrefix("http") ? website : "https://\(website)") {
-            return UIApplication.shared.canOpenURL(url)
-        }
-        return false
+        return validationService.validateWebsite(website)
     }
     
     // MARK: - Change Tracking

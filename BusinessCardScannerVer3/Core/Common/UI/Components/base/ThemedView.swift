@@ -3,7 +3,6 @@
 //  BusinessCardScanner
 //
 //  基礎視圖類，提供主題化支援
-//  位置：Core/Common/UI/Components/Base/ThemedView.swift
 //
 
 import UIKit

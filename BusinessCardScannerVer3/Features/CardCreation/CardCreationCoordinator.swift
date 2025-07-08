@@ -128,6 +128,7 @@ class CardCreationCoordinator: BaseCoordinator {
             repository: dependencies.businessCardRepository,
             photoService: dependencies.photoService,
             businessCardService: dependencies.businessCardService,
+            validationService: dependencies.validationService,
             existingCard: nil,
             initialData: initialData,
             initialPhoto: photo
@@ -150,6 +151,7 @@ class CardCreationCoordinator: BaseCoordinator {
             repository: dependencies.businessCardRepository,
             photoService: dependencies.photoService,
             businessCardService: dependencies.businessCardService,
+            validationService: dependencies.validationService,
             existingCard: existingCard
         )
         
@@ -172,7 +174,8 @@ class CardCreationCoordinator: BaseCoordinator {
         let editViewModel = ContactEditViewModel(
             repository: dependencies.businessCardRepository,
             photoService: dependencies.photoService,
-            businessCardService: dependencies.businessCardService
+            businessCardService: dependencies.businessCardService,
+            validationService: dependencies.validationService
         )
         
         let editViewController = ContactEditViewController(viewModel: editViewModel)

@@ -47,6 +47,10 @@ final class ServiceContainer {
         return KeychainService()
     }()
     
+    private(set) lazy var validationService: ValidationService = {
+        return ValidationService.shared
+    }()
+    
     // MARK: - Feature Services
     
     /// CardCreation 模組的服務
