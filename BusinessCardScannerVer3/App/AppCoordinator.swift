@@ -113,7 +113,7 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
             // 處理相機模組請求
             handleCameraModule()
         case .settings:
-            // TODO: 未來可能需要特殊的設定模組處理邏輯
+            // Settings 模組透過 TabBar 正常運作，無需特殊處理
             break
         }
     }

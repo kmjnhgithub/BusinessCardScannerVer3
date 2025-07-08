@@ -257,9 +257,9 @@ class SettingsViewController: BaseViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isLoading in
                 if isLoading {
-                    // self?.view.showLoadingIndicator() // TODO: Implement loading indicator
+                    self?.showLoading("處理中...")
                 } else {
-                    // self?.view.hideLoadingIndicator() // TODO: Implement loading indicator
+                    self?.hideLoading()
                 }
             }
             .store(in: &cancellables)

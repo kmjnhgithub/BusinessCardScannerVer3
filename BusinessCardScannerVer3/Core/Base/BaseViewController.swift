@@ -91,15 +91,12 @@ class BaseViewController: UIViewController {
     
     /// 顯示載入指示器
     func showLoading(_ message: String? = nil) {
-        // 這裡會在實作 LoadingPresenter 後更新
-        // 暫時使用簡單的實作
-        view.isUserInteractionEnabled = false
+        LoadingPresenter.shared.show(message: message)
     }
     
     /// 隱藏載入指示器
     func hideLoading() {
-        // 這裡會在實作 LoadingPresenter 後更新
-        view.isUserInteractionEnabled = true
+        LoadingPresenter.shared.hide()
     }
     
     /// 顯示錯誤訊息

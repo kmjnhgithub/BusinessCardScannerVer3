@@ -107,7 +107,7 @@ class BusinessCardCell: UITableViewCell {
         
         // 獲取螢幕和容器尺寸資訊
         let screenWidth = UIScreen.main.bounds.width
-        let containerWidth = screenWidth - (AppTheme.Layout.standardPadding * 2)
+        _ = screenWidth - (AppTheme.Layout.standardPadding * 2) // containerWidth not used in current implementation
         
         // 使用設計規範的圖片尺寸計算：圖片高度 = 容器高度，寬度按黃金比例計算
         let imageHeight = containerHeight  // 與容器高度完全貼合
@@ -186,45 +186,15 @@ class BusinessCardCell: UITableViewCell {
             return
         }
         
-        // 嘗試載入縮圖
+        // 使用 PhotoService 的標準縮圖載入流程（已包含舊縮圖檢測和自動重新生成）
         if let thumbnail = photoService.loadThumbnail(path: photoPath) {
-            // 檢查縮圖是否為舊的正方形格式（需要重新生成）
-            let isOldSquareThumbnail = abs(thumbnail.size.width - thumbnail.size.height) < 1.0
-            
-            if isOldSquareThumbnail {
-                print("🔄 偵測到舊格式正方形縮圖，重新生成保持比例的縮圖")
-                // 重新從原圖生成新比例的縮圖
-                if let fullImage = photoService.loadPhoto(path: photoPath) {
-                    let newThumbnailSize = CGSize(width: 168, height: 104) // 新的名片比例
-                    if let newThumbnail = photoService.generateThumbnail(from: fullImage, size: newThumbnailSize) {
-                        setBusinessCardImage(newThumbnail)
-                        // TODO: 可考慮重新儲存新縮圖覆蓋舊的
-                    } else {
-                        setBusinessCardImage(fullImage)
-                    }
-                } else {
-                    // 原圖載入失敗，使用現有縮圖
-                    setBusinessCardImage(thumbnail)
-                }
-            } else {
-                // 使用現有的好比例縮圖
-                setBusinessCardImage(thumbnail)
-            }
+            setBusinessCardImage(thumbnail)
+        } else if let fullImage = photoService.loadPhoto(path: photoPath) {
+            // 縮圖不存在但原圖存在，直接使用原圖
+            setBusinessCardImage(fullImage)
         } else {
-            // 縮圖載入失敗，嘗試載入原圖並產生縮圖
-            if let fullImage = photoService.loadPhoto(path: photoPath) {
-                // 產生新比例的縮圖
-                let thumbnailSize = CGSize(width: 168, height: 104) // 名片比例
-                if let thumbnail = photoService.generateThumbnail(from: fullImage, size: thumbnailSize) {
-                    setBusinessCardImage(thumbnail)
-                } else {
-                    // 縮圖生成失敗，直接使用原圖
-                    setBusinessCardImage(fullImage)
-                }
-            } else {
-                // 圖片載入完全失敗，顯示預設圖示
-                setDefaultImage()
-            }
+            // 圖片完全不存在，顯示預設圖示
+            setDefaultImage()
         }
     }
     
@@ -242,6 +212,8 @@ class BusinessCardCell: UITableViewCell {
         cardImageView.contentMode = .scaleAspectFill  
         cardImageView.tintColor = nil  // 清除 tint color
     }
+    
+    // 移除不必要的方法，讓 PhotoService 負責所有檔案操作
     
     // MARK: - Cell Lifecycle
     
