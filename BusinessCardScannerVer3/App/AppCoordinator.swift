@@ -110,11 +110,17 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
     func tabBarCoordinator(_ coordinator: TabBarCoordinator, didRequestModule moduleType: AppModule) {
         switch moduleType {
         case .camera:
-            // 處理相機模組請求
+            // 處理相機模組請求（拍照 Tab 點擊）
             handleCameraModule()
         case .settings:
             // Settings 模組透過 TabBar 正常運作，無需特殊處理
             break
+        case .cardDetail(let card):
+            // 處理名片詳情模組請求
+            handleCardDetailModule(card: card)
+        case .cardCreation(let option):
+            // 處理名片建立模組請求（+ 按鈕選單選項）
+            handleCardCreationModule(with: option)
         }
     }
     
@@ -127,6 +133,40 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
         
         // 顯示新增名片選項
         showAddCardOptions(from: currentNavigationController)
+    }
+    
+    /// 處理名片詳情模組請求
+    private func handleCardDetailModule(card: BusinessCard) {
+        print("📋 AppCoordinator: 顯示名片詳情 - \(card.name)")
+        
+        guard let currentNavigationController = getCurrentTabNavigationController() else {
+            return
+        }
+        
+        // 這裡應該啟動 CardDetail 模組，目前先使用 CardCreation 的編輯模式
+        presentCardCreationModule(from: currentNavigationController, sourceType: .manual, editingCard: card)
+    }
+    
+    /// 處理名片建立模組請求（帶選項）
+    private func handleCardCreationModule(with option: AddCardOption) {
+        print("🚀 AppCoordinator: 處理名片建立請求，選項: \(option)")
+        
+        guard let currentNavigationController = getCurrentTabNavigationController() else {
+            return
+        }
+        
+        // 將 AddCardOption 轉換為 CardCreationSourceType
+        let sourceType: CardCreationSourceType
+        switch option {
+        case .camera:
+            sourceType = .camera
+        case .photoLibrary:
+            sourceType = .photoLibrary
+        case .manual:
+            sourceType = .manual
+        }
+        
+        presentCardCreationModule(from: currentNavigationController, sourceType: sourceType)
     }
     
     /// 顯示新增名片選項
@@ -155,15 +195,15 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
     }
     
     /// 呈現名片建立模組（統一入口）
-    private func presentCardCreationModule(from navigationController: UINavigationController, sourceType: CardCreationSourceType) {
-        print("📱 AppCoordinator: 呈現名片建立模組，來源類型: \(sourceType)")
+    private func presentCardCreationModule(from navigationController: UINavigationController, sourceType: CardCreationSourceType, editingCard: BusinessCard? = nil) {
+        print("📱 AppCoordinator: 呈現名片建立模組，來源類型: \(sourceType)，編輯卡片: \(editingCard?.name ?? "無")")
         
         // 使用標準模組工廠創建 CardCreation 模組
         let cardCreationModule = moduleFactory.makeCardCreationModule()
         let cardCreationCoordinator = cardCreationModule.makeCoordinator(
             navigationController: navigationController,
             sourceType: sourceType,
-            editingCard: nil
+            editingCard: editingCard
         )
         
         // 設置委託以處理模組輸出
@@ -237,6 +277,8 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
 enum AppModule {
     case camera
     case settings
+    case cardDetail(BusinessCard)
+    case cardCreation(AddCardOption)
 }
 
 // MARK: - TabBarCoordinatorDelegate Protocol

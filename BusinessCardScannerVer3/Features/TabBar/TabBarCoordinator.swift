@@ -133,6 +133,10 @@ final class TabBarCoordinator: BaseCoordinator {
         
         // 創建 CardList 協調器並啟動
         let coordinator = moduleFactory.makeCardListCoordinator(navigationController: navigationController)
+        
+        // 設定 moduleOutput 委託給 TabBarCoordinator（遵循架構）
+        coordinator.moduleOutput = self
+        
         coordinator.start()
         
         // 將協調器添加到子協調器中管理生命週期
@@ -212,6 +216,26 @@ final class TabBarCoordinator: BaseCoordinator {
             selectedImage: tabIndex.selectedIcon
         )
         viewController.tabBarItem = tabBarItem
+    }
+}
+
+// MARK: - CardListModuleOutput
+
+extension TabBarCoordinator: CardListModuleOutput {
+    
+    func cardListDidSelectCard(_ card: BusinessCard) {
+        // 處理名片選擇 - 委託給上層（AppCoordinator）
+        delegate?.tabBarCoordinator(self, didRequestModule: .cardDetail(card))
+    }
+    
+    func cardListDidRequestNewCard() {
+        // 處理新增名片請求（無選項） - 委託給上層
+        delegate?.tabBarCoordinator(self, didRequestModule: .camera)
+    }
+    
+    func cardListDidRequestNewCard(with option: AddCardOption) {
+        // 處理新增名片請求（含選項） - 委託給上層
+        delegate?.tabBarCoordinator(self, didRequestModule: .cardCreation(option))
     }
 }
 
