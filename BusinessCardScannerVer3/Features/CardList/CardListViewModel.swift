@@ -54,7 +54,9 @@ class CardListViewModel: BaseViewModel {
             .assign(to: &$filteredCards)
         
         // 計算是否應該顯示空狀態：必須同時滿足 (!isLoading && !hasError && filteredCards.isEmpty)
+        // 添加 0.1 秒延遲確保資料載入完成後再計算空狀態
         Publishers.CombineLatest3($isLoading, hasErrorPublisher, $filteredCards)
+            .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
             .map(calculateEmptyState)
             .receive(on: DispatchQueue.main)
             .assign(to: &$shouldShowEmptyState)
@@ -67,6 +69,10 @@ class CardListViewModel: BaseViewModel {
                 self?.cards = []
                 // 清空搜尋文字，確保 UI 狀態一致
                 self?.searchText = ""
+                // 強制重新計算空狀態，確保通知響應後立即更新 UI
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self?.forceUpdateEmptyState()
+                }
             }
             .store(in: &cancellables)
     }
@@ -87,6 +93,11 @@ class CardListViewModel: BaseViewModel {
                             self?.handleError(error)
                         } else {
                             self?.clearError()
+                        }
+                        
+                        // 載入完成後強制檢查空狀態一致性
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self?.forceUpdateEmptyState()
                         }
                     }
                 },
@@ -167,6 +178,21 @@ class CardListViewModel: BaseViewModel {
     func handleAddCard() {
         // ViewModel 本身不處理導航，直接通知 Coordinator
         print("📝 使用者請求新增名片")
+    }
+    
+    /// 強制重新計算空狀態（用於狀態同步）
+    /// - Note: 遵循 MVVM 單一職責原則，ViewModel 負責狀態一致性管理
+    private func forceUpdateEmptyState() {
+        let currentEmptyState = calculateEmptyState(
+            isLoading: isLoading,
+            hasError: hasError,
+            filteredCards: filteredCards
+        )
+        
+        if shouldShowEmptyState != currentEmptyState {
+            print("🔄 CardListViewModel: 強制更新空狀態 \(shouldShowEmptyState) → \(currentEmptyState)")
+            shouldShowEmptyState = currentEmptyState
+        }
     }
     
     // MARK: - Private Methods

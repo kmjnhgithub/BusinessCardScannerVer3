@@ -249,5 +249,18 @@ extension TabBarCoordinator: MainTabBarControllerDelegate {
     func tabBarController(_ tabBarController: MainTabBarController, didSelectTabAt index: Int) {
         guard let tabIndex = TabIndex(rawValue: index) else { return }
         print("✅ TabBarCoordinator: 已切換到 \(tabIndex.title) Tab")
+        
+        // 遵循 MVVM+C 架構：Coordinator 負責協調各模組間的資料同步
+        switch tabIndex {
+        case .cardList:
+            // 切換到名片列表時，通知其準備顯示資料
+            cardListCoordinator?.prepareListForDisplay()
+        case .settings:
+            // 設定頁面可能需要重新載入統計數據
+            settingsCoordinator?.prepareForDisplay()
+        case .camera:
+            // 相機 Tab 實際上不會被選中（在 shouldSelectTabAt 中攔截）
+            break
+        }
     }
 }

@@ -53,6 +53,16 @@ final class SettingsCoordinator: BaseCoordinator {
         showSettingsViewController()
     }
     
+    // MARK: - Public Methods
+    
+    /// 準備設定頁面顯示（由上層 Coordinator 調用）
+    /// - Note: 遵循 MVVM+C 架構，重新載入統計數據等狀態資訊
+    func prepareForDisplay() {
+        print("🔄 SettingsCoordinator: 準備設定頁面顯示")
+        // 設定頁面通常需要重新載入統計數據
+        // 可以在這裡添加必要的狀態刷新邏輯
+    }
+    
     // MARK: - Private Methods
     
     /// 顯示設定主頁面

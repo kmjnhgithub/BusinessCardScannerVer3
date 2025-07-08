@@ -74,6 +74,15 @@ final class CardListCoordinator: BaseCoordinator {
         print("✅ CardListCoordinator: 名片列表模組已啟動")
     }
     
+    // MARK: - Public Methods
+    
+    /// 準備列表顯示（由上層 Coordinator 調用）
+    /// - Note: 遵循 MVVM+C 架構，Coordinator 負責協調資料載入時機
+    func prepareListForDisplay() {
+        print("🔄 CardListCoordinator: 準備列表顯示")
+        viewController?.prepareForDisplay()
+    }
+    
     // MARK: - Navigation Methods
     
     /// 導航到名片詳情

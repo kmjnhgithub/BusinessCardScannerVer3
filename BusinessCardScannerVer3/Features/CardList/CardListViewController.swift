@@ -70,8 +70,9 @@ class CardListViewController: BaseViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // 每次進入頁面重新載入資料
-        viewModel.loadCards()
+        // 遵循 MVVM 原則：View 不主動觸發業務邏輯
+        // ViewModel 透過 Combine 和 NotificationCenter 自動管理狀態
+        // 如需重新載入，應由 Coordinator 或特定事件觸發
     }
     
     // MARK: - Setup
@@ -147,13 +148,8 @@ class CardListViewController: BaseViewController {
         emptyStateView.configure(
             image: UIImage(systemName: "rectangle.stack"),
             title: "還沒有名片",
-            message: "點擊 + 新增第一張名片",
-            actionTitle: "新增名片"
+            message: "點擊 + 新增第一張名片"
         )
-        
-        emptyStateView.actionHandler = { [weak self] in
-            self?.addButtonTapped()
-        }
         
         emptyStateView.isHidden = true
     }
@@ -399,10 +395,21 @@ extension UISearchBar {
 
 extension CardListViewController {
     
-    /// 從 Repository 重新載入資料（由 AppCoordinator 調用）
+    /// 從 Repository 重新載入資料（由 Coordinator 調用）
+    /// - Note: 遵循 MVVM+C 架構，只有 Coordinator 可以主動觸發資料載入
     func refreshDataFromRepository() {
-        print("🔄 CardListViewController: 收到重新載入請求")
+        print("🔄 CardListViewController: 收到 Coordinator 重新載入請求")
         viewModel.loadCards()
+    }
+    
+    /// 視圖即將顯示時的資料同步（由 Coordinator 調用）
+    /// - Note: 取代 viewWillAppear 中的自動載入，遵循單一職責原則
+    func prepareForDisplay() {
+        print("🔄 CardListViewController: 準備顯示，檢查資料狀態")
+        // 只在必要時重新載入（例如從其他 Tab 或模組返回）
+        if viewModel.cards.isEmpty {
+            viewModel.loadCards()
+        }
     }
 }
 
