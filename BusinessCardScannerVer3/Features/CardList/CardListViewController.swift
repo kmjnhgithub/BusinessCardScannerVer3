@@ -30,7 +30,6 @@ class CardListViewController: BaseViewController {
     private let tableView = UITableView()
     private let searchController = UISearchController(searchResultsController: nil)
     private let emptyStateView = EmptyStateView()
-    private let addButton = UIButton(type: .system)
     
     // MARK: - Properties
     
@@ -95,13 +94,9 @@ class CardListViewController: BaseViewController {
         // 設定空狀態視圖
         setupEmptyStateView()
         
-        // 設定新增按鈕
-        setupAddButton()
-        
         // 添加子視圖
         view.addSubview(tableView)
         view.addSubview(emptyStateView)
-        view.addSubview(addButton)
     }
     
     private func setupNavigationBar() {
@@ -154,22 +149,6 @@ class CardListViewController: BaseViewController {
         emptyStateView.isHidden = true
     }
     
-    private func setupAddButton() {
-        addButton.backgroundColor = AppTheme.Colors.primary
-        addButton.setImage(UIImage(systemName: "plus"), for: .normal)
-        addButton.tintColor = .white
-        addButton.layer.cornerRadius = 28
-        addButton.layer.shadowColor = AppTheme.Shadow.button.color
-        addButton.layer.shadowOpacity = AppTheme.Shadow.button.opacity
-        addButton.layer.shadowRadius = AppTheme.Shadow.button.radius
-        addButton.layer.shadowOffset = AppTheme.Shadow.button.offset
-        
-        addButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
-        
-        // 按下效果
-        addButton.addTarget(self, action: #selector(addButtonTouchDown), for: .touchDown)
-        addButton.addTarget(self, action: #selector(addButtonTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-    }
     
     override func setupConstraints() {
         // 表格視圖約束
@@ -181,13 +160,6 @@ class CardListViewController: BaseViewController {
         emptyStateView.snp.makeConstraints { make in
             make.center.equalTo(view.safeAreaLayoutGuide)
             make.left.right.equalToSuperview().inset(40)
-        }
-        
-        // 新增按鈕約束
-        addButton.snp.makeConstraints { make in
-            make.right.equalToSuperview().inset(24)
-            make.bottom.equalTo(view.safeAreaLayoutGuide).inset(24)
-            make.width.height.equalTo(56)
         }
     }
     
@@ -271,18 +243,6 @@ class CardListViewController: BaseViewController {
     
     @objc private func refreshControlValueChanged() {
         viewModel.reloadData()
-    }
-    
-    @objc private func addButtonTouchDown() {
-        UIView.animate(withDuration: 0.1) {
-            self.addButton.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
-        }
-    }
-    
-    @objc private func addButtonTouchUp() {
-        UIView.animate(withDuration: 0.1) {
-            self.addButton.transform = .identity
-        }
     }
 }
 
