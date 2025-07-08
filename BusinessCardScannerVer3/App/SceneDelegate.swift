@@ -154,26 +154,4 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         print("✅ 活躍功能驗證測試已設定")
     }
     
-    // MARK: - Task 1.8 ComponentShowcase Test (備用)
-    
-    /// ComponentShowcase 測試設定（開發測試用）
-    private func setupComponentShowcaseTest() {
-        let navigationController = UINavigationController()
-        let moduleFactory = ModuleFactory()
-        
-        // 建立 ComponentShowcase Coordinator
-        let coordinator = ComponentShowcaseCoordinator(
-            navigationController: navigationController,
-            moduleFactory: moduleFactory
-        )
-        
-        // 啟動 ComponentShowcase
-        coordinator.start()
-        
-        // 設定根視圖控制器
-        window?.rootViewController = navigationController
-        window?.makeKeyAndVisible()
-        
-        print("✅ Task 1.8: ComponentShowcase 測試應用已啟動")
-    }
 }

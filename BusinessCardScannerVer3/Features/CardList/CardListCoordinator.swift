@@ -140,8 +140,8 @@ final class CardListCoordinator: BaseCoordinator {
         case .photoLibrary:
             checkPhotoLibraryPermissionAndProceed()
         case .manual:
-            // 手動輸入不需要權限檢查
-            moduleOutput?.cardListDidRequestNewCard(with: option)
+            // 手動輸入不需要權限檢查，直接啟動名片建立流程
+            startCardCreationFlow(with: option)
         }
     }
     
@@ -155,7 +155,7 @@ final class CardListCoordinator: BaseCoordinator {
                 case .authorized:
                     // 權限已授權，繼續拍照流程
                     print("✅ 相機權限已授權")
-                    self?.moduleOutput?.cardListDidRequestNewCard(with: .camera)
+                    self?.startCardCreationFlow(with: .camera)
                     
                 case .denied, .restricted:
                     // 權限被拒絕，顯示設定提示
@@ -181,7 +181,7 @@ final class CardListCoordinator: BaseCoordinator {
                 case .authorized:
                     // 權限已授權，繼續相簿選擇流程
                     print("✅ 相簿權限已授權")
-                    self?.moduleOutput?.cardListDidRequestNewCard(with: .photoLibrary)
+                    self?.startCardCreationFlow(with: .photoLibrary)
                     
                 case .denied, .restricted:
                     // 權限被拒絕，顯示設定提示
@@ -195,6 +195,35 @@ final class CardListCoordinator: BaseCoordinator {
                 }
             }
         }
+    }
+    
+    /// 啟動名片建立流程
+    private func startCardCreationFlow(with sourceType: AddCardOption) {
+        print("🚀 CardListCoordinator: 啟動名片建立流程，來源類型: \(sourceType)")
+        
+        // 將 AddCardOption 轉換為 CardCreationSourceType
+        let cardCreationSourceType: CardCreationSourceType
+        switch sourceType {
+        case .camera:
+            cardCreationSourceType = .camera
+        case .photoLibrary:
+            cardCreationSourceType = .photoLibrary
+        case .manual:
+            cardCreationSourceType = .manual
+        }
+        
+        // 建立 CardCreationCoordinator 
+        let serviceContainer = ServiceContainer.shared
+        cardCreationCoordinator = CardCreationCoordinator(
+            navigationController: navigationController,
+            dependencies: serviceContainer,
+            sourceType: cardCreationSourceType,
+            editingCard: nil
+        )
+        cardCreationCoordinator?.moduleOutput = self
+        
+        // 啟動名片建立流程
+        cardCreationCoordinator?.start()
     }
     
     /// 顯示權限被拒絕的提示
