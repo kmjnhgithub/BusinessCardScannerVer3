@@ -29,7 +29,9 @@ class PhotoService: PhotoServiceProtocol {
         static let photoPrefix = "photo_"
         static let jpegCompressionQuality: CGFloat = 0.8
         static let maxImageSize: CGFloat = 1024
-        static let thumbnailSize = CGSize(width: 168, height: 168) // @3x for 56pt
+        // 🎯 使用名片比例的縮圖尺寸（黃金比例 1:0.618）
+        // 寬度 168pt，高度按黃金比例計算：168 * 0.618 ≈ 104pt
+        static let thumbnailSize = CGSize(width: 168, height: 104) // @3x for optimal business card ratio
     }
     
     // MARK: - Properties
@@ -124,9 +126,32 @@ class PhotoService: PhotoServiceProtocol {
     }
     
     func generateThumbnail(from image: UIImage, size: CGSize) -> UIImage? {
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: size))
+        // 🎯 保持原始比例的智慧縮圖生成
+        // 計算適配到目標尺寸的比例，確保圖片不被拉伸
+        let imageSize = image.size
+        let targetSize = size
+        
+        // 計算縮放比例（取較小值確保圖片完全適配到容器內）
+        let scaleX = targetSize.width / imageSize.width
+        let scaleY = targetSize.height / imageSize.height
+        let scale = min(scaleX, scaleY)
+        
+        // 計算縮放後的實際尺寸（保持比例）
+        let scaledWidth = imageSize.width * scale
+        let scaledHeight = imageSize.height * scale
+        
+        // 計算居中位置
+        let x = (targetSize.width - scaledWidth) / 2
+        let y = (targetSize.height - scaledHeight) / 2
+        
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { context in
+            // 填充背景色（可選，保持透明）
+            UIColor.clear.setFill()
+            context.fill(CGRect(origin: .zero, size: targetSize))
+            
+            // 在正確位置和尺寸繪製圖片，保持比例
+            image.draw(in: CGRect(x: x, y: y, width: scaledWidth, height: scaledHeight))
         }
     }
     

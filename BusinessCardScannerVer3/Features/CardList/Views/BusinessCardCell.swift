@@ -62,6 +62,10 @@ class BusinessCardCell: UITableViewCell {
         cardImageView.layer.masksToBounds = true
         cardImageView.clipsToBounds = true  // 確保圖片完全填滿容器
         
+        // 設定內容抗壓優先級，防止圖片被壓縮
+        cardImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
+        cardImageView.setContentCompressionResistancePriority(.required, for: .vertical)
+        
         // 姓名標籤 - 使用專用名片姓名字型（18pt, Semibold）
         nameLabel.font = AppTheme.Fonts.cardName
         nameLabel.textColor = AppTheme.Colors.primaryText
@@ -97,16 +101,18 @@ class BusinessCardCell: UITableViewCell {
         let containerHeight = cellHeight - (verticalMargin * 2)
         let containerPadding: CGFloat = 2  // 縮短容器內邊距
         
+        // 🎯 解決方案說明：
+        // 根據 UI設計規範文檔v1.0.md 第 5.5 節，圖片應與 Cell 內容高度完全貼合
+        // 使用 top + bottom 約束取代 centerY + height，避免圖片被壓縮或裁切
+        
         // 獲取螢幕和容器尺寸資訊
         let screenWidth = UIScreen.main.bounds.width
         let containerWidth = screenWidth - (AppTheme.Layout.standardPadding * 2)
         
-        // 使用新的響應式圖片尺寸計算方法
-        let imageSize = AppTheme.Layout.ResponsiveLayout.CardList.calculateResponsiveImageSize(
-            cellContentHeight: containerHeight,
-            cellContentWidth: containerWidth,
-            screenWidth: screenWidth
-        )
+        // 使用設計規範的圖片尺寸計算：圖片高度 = 容器高度，寬度按黃金比例計算
+        let imageHeight = containerHeight  // 與容器高度完全貼合
+        let imageWidth = imageHeight * AppTheme.Layout.ResponsiveLayout.CardList.imageWidthToHeightRatio  // 黃金比例寬度
+        let imageSize = CGSize(width: imageWidth, height: imageHeight)
         
         // 容器視圖約束（響應式高度）
         containerView.snp.makeConstraints { make in
@@ -116,12 +122,12 @@ class BusinessCardCell: UITableViewCell {
             // height 由 top + bottom 約束自然決定，避免過度約束
         }
         
-        // 名片圖片約束（響應式尺寸，左貼齊）
+        // 名片圖片約束（響應式尺寸，左貼齊，與容器高度完全貼合）
         cardImageView.snp.makeConstraints { make in
             make.left.equalToSuperview() // 左貼齊容器，無間距
-            make.centerY.equalToSuperview() // 垂直居中
+            make.top.bottom.equalToSuperview() // 與容器高度完全貼合，避免裁切
             make.width.equalTo(imageSize.width) // 響應式計算的寬度
-            make.height.equalTo(imageSize.height) // 響應式計算的高度
+            // 移除 height 約束，讓圖片高度由 top + bottom 自然決定
         }
         
         // 姓名標籤約束（上半部 1/2 區域）
@@ -182,12 +188,33 @@ class BusinessCardCell: UITableViewCell {
         
         // 嘗試載入縮圖
         if let thumbnail = photoService.loadThumbnail(path: photoPath) {
-            setBusinessCardImage(thumbnail)
+            // 檢查縮圖是否為舊的正方形格式（需要重新生成）
+            let isOldSquareThumbnail = abs(thumbnail.size.width - thumbnail.size.height) < 1.0
+            
+            if isOldSquareThumbnail {
+                print("🔄 偵測到舊格式正方形縮圖，重新生成保持比例的縮圖")
+                // 重新從原圖生成新比例的縮圖
+                if let fullImage = photoService.loadPhoto(path: photoPath) {
+                    let newThumbnailSize = CGSize(width: 168, height: 104) // 新的名片比例
+                    if let newThumbnail = photoService.generateThumbnail(from: fullImage, size: newThumbnailSize) {
+                        setBusinessCardImage(newThumbnail)
+                        // TODO: 可考慮重新儲存新縮圖覆蓋舊的
+                    } else {
+                        setBusinessCardImage(fullImage)
+                    }
+                } else {
+                    // 原圖載入失敗，使用現有縮圖
+                    setBusinessCardImage(thumbnail)
+                }
+            } else {
+                // 使用現有的好比例縮圖
+                setBusinessCardImage(thumbnail)
+            }
         } else {
             // 縮圖載入失敗，嘗試載入原圖並產生縮圖
             if let fullImage = photoService.loadPhoto(path: photoPath) {
-                // 產生縮圖並設定
-                let thumbnailSize = CGSize(width: 168, height: 168) // @3x for 56pt
+                // 產生新比例的縮圖
+                let thumbnailSize = CGSize(width: 168, height: 104) // 名片比例
                 if let thumbnail = photoService.generateThumbnail(from: fullImage, size: thumbnailSize) {
                     setBusinessCardImage(thumbnail)
                 } else {
@@ -211,7 +238,8 @@ class BusinessCardCell: UITableViewCell {
     /// 設定實際名片圖片
     private func setBusinessCardImage(_ image: UIImage) {
         cardImageView.image = image
-        cardImageView.contentMode = .scaleAspectFill  // 名片圖片使用 fill 模式完全填滿
+        // 🎯 現在縮圖已保持正確比例，可以使用 scaleAspectFill 完全填滿容器
+        cardImageView.contentMode = .scaleAspectFill  
         cardImageView.tintColor = nil  // 清除 tint color
     }
     
