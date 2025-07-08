@@ -283,7 +283,7 @@ class SettingsViewController: BaseViewController {
         // Toast 事件綁定
         viewModel.toastPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] message in
+            .sink { message in
                 ToastPresenter.shared.showSuccess(message)
             }
             .store(in: &cancellables)

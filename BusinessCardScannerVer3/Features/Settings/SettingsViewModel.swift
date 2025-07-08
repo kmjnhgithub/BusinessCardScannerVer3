@@ -143,15 +143,38 @@ class SettingsViewModel: ObservableObject {
     func confirmClearAllData() {
         isLoading = true
         
-        // 模擬清除操作
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            
-            // 實際實作會呼叫 repository.deleteAllCards()
-            self.totalCardsCount = 0
-            self.isLoading = false
-            self.toastSubject.send("所有資料已清除")
-        }
+        // 真正刪除所有資料 - 遵循 MVVM+C 架構的單一職責原則
+        repository.deleteAll()
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    guard let self = self else { return }
+                    
+                    self.isLoading = false
+                    
+                    switch completion {
+                    case .finished:
+                        // 刪除成功，重新載入統計資料
+                        self.totalCardsCount = 0
+                        self.toastSubject.send("所有資料已清除")
+                        
+                        // 發送全域通知，讓其他 ViewModel 知道資料已清空
+                        NotificationCenter.default.post(
+                            name: .businessCardDataDidClear,
+                            object: nil
+                        )
+                        
+                    case .failure(let error):
+                        // 刪除失敗，顯示錯誤訊息
+                        print("⚠️ SettingsViewModel: 清除資料失敗 - \(error)")
+                        self.toastSubject.send("清除失敗，請重試")
+                    }
+                },
+                receiveValue: { _ in
+                    // deleteAll() 返回 Void，這裡不需要處理
+                }
+            )
+            .store(in: &cancellables)
     }
     
     // MARK: - Private Methods
@@ -261,4 +284,11 @@ extension SettingsViewModel {
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "版本 \(version) (\(build))"
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    /// 名片資料已清空的通知
+    static let businessCardDataDidClear = Notification.Name("businessCardDataDidClear")
 }

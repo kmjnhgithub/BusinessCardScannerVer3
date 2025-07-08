@@ -465,7 +465,7 @@ private class LoadingContainerView: ThemedView {
         containerStackView.distribution = .fill
         containerStackView.spacing = AppTheme.Layout.standardPadding
         
-        // 組裝視圖
+        // 組裝視圖 - 確保先完成視圖層次建立
         containerStackView.addArrangedSubview(activityIndicator)
         if configuration.showProgress {
             containerStackView.addArrangedSubview(progressView)
@@ -474,18 +474,30 @@ private class LoadingContainerView: ThemedView {
             containerStackView.addArrangedSubview(messageLabel)
         }
         
+        // 將 containerStackView 添加到當前視圖
         addSubview(containerStackView)
+        
+        // 立即設定約束 - 此時視圖層次已正確建立
+        setupConstraintsManually()
     }
     
     override func setupConstraints() {
+        // 此方法保留為空，避免 ThemedView 自動調用時發生錯誤
+        // 實際約束設定在 setupConstraintsManually() 中進行
+    }
+    
+    /// 手動設定約束 - 確保視圖層次已正確建立
+    private func setupConstraintsManually() {
+        // 安全檢查：確保視圖已添加到父視圖
+        assert(containerStackView.superview == self, "containerStackView 必須先添加到父視圖")
+        
+        // 設定主容器約束 - 遵循 UI 設計規範的標準間距
         containerStackView.snp.makeConstraints { make in
             make.edges.equalToSuperview().inset(AppTheme.Layout.standardPadding * 2)
         }
         
-        progressView.snp.makeConstraints { make in
-            make.width.equalToSuperview().multipliedBy(0.75)  // 父視圖寬度的 75%
-            make.height.equalTo(4)
-        }
+        // 使用專用方法設定進度條約束
+        setupProgressViewConstraints()
     }
     
     // MARK: - Update Methods
@@ -494,10 +506,37 @@ private class LoadingContainerView: ThemedView {
         self.configuration = configuration
         
         // 更新進度條顯示
+        let wasProgressHidden = progressView.isHidden
         progressView.isHidden = !configuration.showProgress
+        
+        // 如果進度條顯示狀態改變，需要重新設定約束
+        if wasProgressHidden != progressView.isHidden {
+            // 移除舊約束
+            progressView.snp.removeConstraints()
+            
+            // 重新添加到堆疊視圖（如果需要）
+            if !progressView.isHidden && !containerStackView.arrangedSubviews.contains(progressView) {
+                // 在 activityIndicator 後添加
+                let insertIndex = containerStackView.arrangedSubviews.firstIndex(of: activityIndicator) ?? 0
+                containerStackView.insertArrangedSubview(progressView, at: insertIndex + 1)
+            }
+            
+            // 重新設定進度條約束
+            setupProgressViewConstraints()
+        }
         
         // 更新訊息
         updateMessage(configuration.message)
+    }
+    
+    /// 設定進度條約束的專用方法
+    private func setupProgressViewConstraints() {
+        guard !progressView.isHidden, progressView.superview != nil else { return }
+        
+        progressView.snp.makeConstraints { make in
+            make.width.equalToSuperview().multipliedBy(0.75)
+            make.height.equalTo(4)
+        }
     }
     
     func updateMessage(_ message: String?) {

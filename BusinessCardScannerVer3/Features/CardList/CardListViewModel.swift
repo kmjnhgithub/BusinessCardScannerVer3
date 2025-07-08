@@ -29,7 +29,6 @@ class CardListViewModel: BaseViewModel {
     // MARK: - Private Properties
     
     private let repository: BusinessCardRepository
-    private var shouldLoadMockDataOnEmpty: Bool = true
     
     // MARK: - Initialization
     
@@ -59,6 +58,17 @@ class CardListViewModel: BaseViewModel {
             .map(calculateEmptyState)
             .receive(on: DispatchQueue.main)
             .assign(to: &$shouldShowEmptyState)
+        
+        // 監聽資料清除通知 - 遵循 MVVM+C 架構的響應式數據流
+        NotificationCenter.default.publisher(for: .businessCardDataDidClear)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("📢 CardListViewModel: 收到資料清除通知，清空本地資料")
+                self?.cards = []
+                // 清空搜尋文字，確保 UI 狀態一致
+                self?.searchText = ""
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Public Methods
@@ -74,9 +84,7 @@ class CardListViewModel: BaseViewModel {
                         self?.stopLoading()
                         if case .failure(let error) = completion {
                             print("❌ 載入名片失敗: \(error.localizedDescription)")
-                            // 如果資料庫載入失敗，載入假資料以避免空白畫面
-                            self?.generateMockData()
-                            self?.clearError() // 載入假資料後清除錯誤狀態
+                            self?.handleError(error)
                         } else {
                             self?.clearError()
                         }
@@ -86,14 +94,6 @@ class CardListViewModel: BaseViewModel {
                     DispatchQueue.main.async {
                         self?.cards = cards
                         print("✅ 已從 Repository 載入 \(cards.count) 筆名片資料")
-                        
-                        // 修復：只有在首次載入且資料庫真正為空時才載入 mock 資料
-                        // 這樣可以避免覆蓋用戶新增的資料
-                        if cards.isEmpty && self?.shouldLoadMockDataOnEmpty == true {
-                            print("📝 資料庫為空，載入展示用假資料")
-                            self?.generateMockData()
-                            self?.shouldLoadMockDataOnEmpty = false // 防止重複載入
-                        }
                     }
                 }
             )
@@ -129,7 +129,7 @@ class CardListViewModel: BaseViewModel {
                         }
                     }
                 },
-                receiveValue: { [weak self] _ in
+                receiveValue: { _ in
                     // 3. 刪除成功後，刪除對應的照片檔案
                     if let photoPath = card.photoPath {
                         let photoService = ServiceContainer.shared.photoService
@@ -226,120 +226,6 @@ class CardListViewModel: BaseViewModel {
         }
     }
     
-    /// 生成測試用假資料
-    private func generateMockData() {
-        let mockCards = [
-            BusinessCard(
-                id: UUID(),
-                name: "張志明",
-                namePhonetic: "Zhang Zhiming",
-                jobTitle: "資深軟體工程師",
-                company: "科技創新有限公司",
-                companyPhonetic: "Tech Innovation Ltd.",
-                department: "產品研發部",
-                email: "zhiming.zhang@techinnovation.com",
-                phone: "02-2345-6789",
-                mobile: "0912-345-678",
-                address: "台北市信義區信義路五段7號",
-                website: "https://www.techinnovation.com",
-                createdAt: Date().addingTimeInterval(-86400 * 7), // 7天前
-                updatedAt: Date().addingTimeInterval(-86400 * 3), // 3天前
-                parseSource: "ai",
-                parseConfidence: 0.95
-            ),
-            
-            BusinessCard(
-                id: UUID(),
-                name: "李美慧",
-                jobTitle: "行銷總監",
-                company: "品牌行銷策略公司",
-                department: "策略企劃部",
-                email: "meihui.li@brandmarketing.com.tw",
-                phone: "02-8765-4321",
-                mobile: "0987-654-321",
-                address: "台北市大安區敦化南路二段201號12樓",
-                createdAt: Date().addingTimeInterval(-86400 * 5), // 5天前
-                updatedAt: Date().addingTimeInterval(-86400 * 1), // 1天前
-                parseSource: "local",
-                parseConfidence: 0.82
-            ),
-            
-            BusinessCard(
-                id: UUID(),
-                name: "王建國",
-                namePhonetic: "David Wang",
-                jobTitle: "業務經理",
-                company: "國際貿易股份有限公司",
-                department: "海外業務部",
-                email: "david.wang@international-trade.com",
-                phone: "04-2234-5678",
-                mobile: "0923-456-789",
-                fax: "04-2234-5679",
-                address: "台中市西屯區台灣大道三段99號",
-                website: "https://www.international-trade.com",
-                memo: "專精亞太地區業務拓展",
-                createdAt: Date().addingTimeInterval(-86400 * 3), // 3天前
-                updatedAt: Date().addingTimeInterval(-86400 * 2), // 2天前
-                parseSource: "ai",
-                parseConfidence: 0.88
-            ),
-            
-            BusinessCard(
-                id: UUID(),
-                name: "陳雅婷",
-                jobTitle: "UI/UX 設計師",
-                company: "數位創意設計工作室",
-                email: "yating.chen@digital-creative.studio",
-                mobile: "0956-789-012",
-                address: "高雄市前鎮區中山二路777號8樓",
-                website: "https://www.yating-design.portfolio.com",
-                memo: "擅長行動應用程式介面設計",
-                createdAt: Date().addingTimeInterval(-86400 * 2), // 2天前
-                updatedAt: Date().addingTimeInterval(-86400 * 1), // 1天前
-                parseSource: "manual"
-            ),
-            
-            BusinessCard(
-                id: UUID(),
-                name: "林志偉",
-                namePhonetic: "Kevin Lin",
-                jobTitle: "專案經理",
-                company: "系統整合科技公司",
-                companyPhonetic: "System Integration Tech Co.",
-                department: "專案管理部",
-                email: "kevin.lin@si-tech.com.tw",
-                phone: "07-321-6789",
-                mobile: "0934-567-890",
-                address: "高雄市苓雅區四維三路6號15樓",
-                website: "https://www.si-tech.com.tw",
-                createdAt: Date().addingTimeInterval(-86400 * 1), // 1天前
-                updatedAt: Date(),
-                parseSource: "ai",
-                parseConfidence: 0.91
-            ),
-            
-            BusinessCard(
-                id: UUID(),
-                name: "黃淑芬",
-                jobTitle: "財務主管",
-                company: "會計師事務所",
-                email: "shufen.huang@accounting-firm.com",
-                phone: "02-2987-6543",
-                mobile: "0945-678-901",
-                address: "台北市中山區南京東路三段287號6樓",
-                memo: "CPA 執業會計師，專精稅務規劃",
-                createdAt: Date().addingTimeInterval(-3600), // 1小時前
-                updatedAt: Date(),
-                parseSource: "local",
-                parseConfidence: 0.76
-            )
-        ]
-        
-        // 模擬非同步載入
-        self.cards = mockCards
-        
-        print("✅ 已載入 \(mockCards.count) 筆測試名片資料")
-    }
 }
 
 // MARK: - Mock Data Helpers (Debug Only)
@@ -355,7 +241,6 @@ extension CardListViewModel {
         searchText = ""
         isLoading = false
         error = nil
-        shouldLoadMockDataOnEmpty = false
     }
     
     /// 測試專用狀態設定
@@ -380,10 +265,6 @@ extension CardListViewModel {
         cards.removeAll()
     }
     
-    /// 重新生成測試資料（測試用）
-    func regenerateMockData() {
-        generateMockData()
-    }
     
     /// 添加單筆測試資料（測試用）
     func addMockCard() {
