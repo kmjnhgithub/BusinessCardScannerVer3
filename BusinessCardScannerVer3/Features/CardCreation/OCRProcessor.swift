@@ -232,13 +232,8 @@ class OCRProcessor {
             " ": "",     // 移除中文文字中的空格
         ]
         
-        // 修正英文 OCR 錯誤 (備用，目前未使用以避免過度修正)
-        let _englishCorrections: [String: String] = [
-            "rn": "m",   // rn 組合可能被識別為 m
-            "vv": "w",   // vv 組合可能被識別為 w
-            "cl": "d",   // cl 組合可能被識別為 d
-            "li": "h",   // li 組合可能被識別為 h
-        ]
+        // 注意：英文 OCR 修正功能暫時移除以避免過度修正
+        // 如果未來需要英文修正，可在此處添加相關邏輯
         
         // 應用中文修正（但要小心不要過度修正）
         for (wrong, correct) in chineseCorrections {

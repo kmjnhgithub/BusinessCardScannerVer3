@@ -353,7 +353,7 @@ class ContactEditViewModel: BaseViewModel {
         cardData = originalCardData
         
         // 如果有原始照片路徑，重新載入照片
-        if let photoPath = photoPath {
+        if photoPath != nil {
             loadPhotoIfNeeded()
         } else {
             photo = nil

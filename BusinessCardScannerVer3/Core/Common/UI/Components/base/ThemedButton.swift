@@ -94,7 +94,8 @@ class ThemedButton: UIButton {
         setTitleColor(style.titleColor, for: .normal)
         titleLabel?.font = AppTheme.Fonts.buttonTitle
         
-        // 內容邊距設定
+        // 內容邊距設定 - 暫時保留以確保 UI 一致性
+        // 注意：contentEdgeInsets 在 iOS 15+ 使用 UIButtonConfiguration 時會被忽略
         contentEdgeInsets = UIEdgeInsets(
             top: 0,
             left: AppTheme.Layout.buttonHorizontalPadding,
@@ -112,8 +113,8 @@ class ThemedButton: UIButton {
         addTarget(self, action: #selector(touchDown), for: .touchDown)
         addTarget(self, action: #selector(touchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
         
-        // 設定禁用狀態樣式
-        adjustsImageWhenDisabled = false
+        // 注意：adjustsImageWhenDisabled 在 iOS 15.0+ 使用 UIButtonConfiguration 時已不需要
+        // 移除已棄用的屬性設定，確保 UI 配置安全性
     }
     
     // MARK: - Loading State
@@ -131,7 +132,7 @@ class ThemedButton: UIButton {
             
             // 建立並顯示載入指示器
             if activityIndicator == nil {
-                let indicator = UIActivityIndicatorView(style: .white)
+                let indicator = UIActivityIndicatorView(style: .medium)
                 indicator.hidesWhenStopped = true
                 addSubview(indicator)
                 indicator.snp.makeConstraints { make in

@@ -89,9 +89,9 @@ class VisionService {
         // 設定識別等級（精確度 vs 速度）
         request.recognitionLevel = .accurate
         
-        // 檢查並設定支援的語言
-        let supportedLanguages = try? VNRecognizeTextRequest.supportedRecognitionLanguages(for: .accurate, revision: VNRecognizeTextRequestRevision1)
-        print("🌍 VisionService: 系統支援的語言: \(supportedLanguages ?? [])")
+        // 使用最新的 revision 以確保 API 安全性和兼容性
+        // 移除已棄用的 supportedRecognitionLanguages 檢查，直接設定支援的語言
+        print("🌍 VisionService: 使用系統預設支援的語言配置")
         
         // 修正：使用 Ver2 的條件式語言設定邏輯
         if #available(iOS 16.0, *) {

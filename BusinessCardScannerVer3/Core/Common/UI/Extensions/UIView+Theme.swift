@@ -310,8 +310,10 @@ extension UIView {
 
 extension UIView {
     
-    private struct AssociatedKeys {
-        static var loadingView = "loadingView"
+    /// 安全的 Associated Objects 鍵管理
+    /// 使用 class 類型作為鍵，避免 UnsafeRawPointer 安全性問題
+    private final class AssociatedKeys {
+        fileprivate static let loadingView = "UIView.LoadingView"
     }
     
     /// 顯示載入狀態
@@ -366,8 +368,8 @@ extension UIView {
             make.center.equalToSuperview()
         }
         
-        // 保存參考
-        objc_setAssociatedObject(self, &AssociatedKeys.loadingView, loadingView, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        // 安全地保存參考，使用字串常數而非變數位址
+        objc_setAssociatedObject(self, AssociatedKeys.loadingView, loadingView, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
         // 淡入動畫
         loadingView.alpha = 0
@@ -378,14 +380,15 @@ extension UIView {
     
     /// 隱藏載入狀態
     func hideLoading() {
-        guard let loadingView = objc_getAssociatedObject(self, &AssociatedKeys.loadingView) as? UIView else { return }
+        guard let loadingView = objc_getAssociatedObject(self, AssociatedKeys.loadingView) as? UIView else { return }
         
         UIView.animate(withDuration: AppTheme.Animation.fastDuration,
                       animations: {
             loadingView.alpha = 0
         }, completion: { _ in
             loadingView.removeFromSuperview()
-            objc_setAssociatedObject(self, &AssociatedKeys.loadingView, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            // 安全地移除關聯對象，確保記憶體正確釋放
+            objc_setAssociatedObject(self, AssociatedKeys.loadingView, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         })
     }
 }
