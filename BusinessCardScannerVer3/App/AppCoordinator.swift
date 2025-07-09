@@ -126,13 +126,36 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
     
     /// 處理相機模組請求
     private func handleCameraModule() {
+        print("📸 AppCoordinator: 處理拍照 Tab 點擊 - 直接開啟相機")
+        
         // 取得當前選中 Tab 的導航控制器
         guard let currentNavigationController = getCurrentTabNavigationController() else {
             return
         }
         
-        // 顯示新增名片選項
-        showAddCardOptions(from: currentNavigationController)
+        // 檢查相機權限
+        let permissionManager = ServiceContainer.shared.permissionManager
+        
+        permissionManager.requestCameraPermission { [weak self] status in
+            DispatchQueue.main.async {
+                switch status {
+                case .authorized:
+                    // 權限已授權，直接開啟相機
+                    print("✅ 相機權限已授權，開啟相機拍攝")
+                    self?.presentCardCreationModule(from: currentNavigationController, sourceType: .camera)
+                    
+                case .denied, .restricted:
+                    // 權限被拒絕，顯示設定提示
+                    print("❌ 相機權限被拒絕")
+                    guard let topViewController = self?.getTopViewController() else { return }
+                    permissionManager.showPermissionSettingsAlert(for: .camera, from: topViewController)
+                    
+                case .notDetermined:
+                    // 這種情況理論上不應該發生，因為 requestCameraPermission 會處理
+                    print("⚠️ 相機權限狀態未確定")
+                }
+            }
+        }
     }
     
     /// 處理名片詳情模組請求
@@ -169,30 +192,6 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
         presentCardCreationModule(from: currentNavigationController, sourceType: sourceType)
     }
     
-    /// 顯示新增名片選項
-    private func showAddCardOptions(from navigationController: UINavigationController) {
-        guard let topViewController = getTopViewController() else { return }
-        
-        let actions: [AlertPresenter.AlertAction] = [
-            .default("拍照") { [weak self] in
-                self?.presentCardCreationModule(from: navigationController, sourceType: .camera)
-            },
-            .default("從相簿選擇") { [weak self] in
-                self?.presentCardCreationModule(from: navigationController, sourceType: .photoLibrary)
-            },
-            .default("手動輸入") { [weak self] in
-                self?.presentCardCreationModule(from: navigationController, sourceType: .manual)
-            },
-            .cancel("取消", nil)
-        ]
-        
-        AlertPresenter.shared.showActionSheet(
-            title: "新增名片",
-            message: "選擇新增方式",
-            actions: actions,
-            sourceView: topViewController.view
-        )
-    }
     
     /// 呈現名片建立模組（統一入口）
     private func presentCardCreationModule(from navigationController: UINavigationController, sourceType: CardCreationSourceType, editingCard: BusinessCard? = nil) {
