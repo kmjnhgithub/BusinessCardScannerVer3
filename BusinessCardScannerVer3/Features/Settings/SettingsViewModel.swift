@@ -11,14 +11,12 @@ import Combine
 
 /// 設定項目類型
 enum SettingItemType {
-    case aiConfiguration    // AI 功能設定
     case exportData        // 匯出資料
     case clearData         // 清除資料
     case about             // 關於我們
     
     var title: String {
         switch self {
-        case .aiConfiguration: return "AI 智慧解析"
         case .exportData: return "匯出資料"
         case .clearData: return "清除所有資料"
         case .about: return "關於我們"
@@ -27,7 +25,6 @@ enum SettingItemType {
     
     var subtitle: String? {
         switch self {
-        case .aiConfiguration: return "使用 OpenAI 提升名片解析準確度"
         case .exportData: return "匯出為 CSV 或 VCF 格式"
         case .clearData: return "刪除所有已儲存的名片資料"
         case .about: return "版本資訊和開發者資料"
@@ -36,7 +33,6 @@ enum SettingItemType {
     
     var icon: String {
         switch self {
-        case .aiConfiguration: return "brain.head.profile"
         case .exportData: return "square.and.arrow.up"
         case .clearData: return "trash"
         case .about: return "info.circle"
@@ -114,9 +110,6 @@ class SettingsViewModel: ObservableObject {
     /// - Parameter item: 設定項目類型
     func handleSettingItemTap(_ item: SettingItemType) {
         switch item {
-        case .aiConfiguration:
-            navigationSubject.send(.aiSettings)
-            
         case .exportData:
             handleExportData()
             
@@ -275,7 +268,7 @@ extension SettingsViewModel {
     
     /// 取得所有設定項目
     var settingItems: [SettingItemType] {
-        return [.aiConfiguration, .exportData, .clearData, .about]
+        return [.exportData, .clearData, .about]
     }
     
     /// 取得應用程式版本資訊
