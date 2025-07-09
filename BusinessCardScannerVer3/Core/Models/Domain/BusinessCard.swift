@@ -155,3 +155,4 @@ extension BusinessCard: Equatable {
 extension BusinessCard: Identifiable {
     // id 屬性已經存在，自動符合 Identifiable
 }
+

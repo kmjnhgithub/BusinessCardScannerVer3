@@ -305,6 +305,8 @@ class SettingsViewController: BaseViewController {
         switch action {
         case .aiSettings:
             coordinator?.showAISettings()
+        case .shareFile(let fileURL):
+            showShareSheet(for: fileURL)
         }
     }
     
@@ -375,6 +377,22 @@ class SettingsViewController: BaseViewController {
             """,
             title: "關於我們"
         )
+    }
+    
+    private func showShareSheet(for fileURL: URL) {
+        let activityViewController = UIActivityViewController(
+            activityItems: [fileURL],
+            applicationActivities: nil
+        )
+        
+        // iPad 支援
+        if let popoverController = activityViewController.popoverPresentationController {
+            popoverController.sourceView = view
+            popoverController.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popoverController.permittedArrowDirections = []
+        }
+        
+        present(activityViewController, animated: true)
     }
 }
 

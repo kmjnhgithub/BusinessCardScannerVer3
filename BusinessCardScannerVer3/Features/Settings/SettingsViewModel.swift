@@ -222,28 +222,88 @@ class SettingsViewModel: ObservableObject {
     func exportAsCSV() {
         isLoading = true
         
-        // 模擬匯出操作
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            guard let self = self else { return }
-            
-            self.isLoading = false
-            self.toastSubject.send("CSV 檔案匯出成功")
-            // 實際實作會呼叫 exportService.exportAsCSV()
-        }
+        // 從 repository 取得所有名片資料
+        repository.fetchAll()
+            .mapError { _ in ExportError.createFileFailed }
+            .flatMap { [weak self] cards -> AnyPublisher<URL, ExportError> in
+                guard let self = self else {
+                    return Fail(error: ExportError.createFileFailed)
+                        .eraseToAnyPublisher()
+                }
+                
+                return self.exportService.exportAsCSV(cards: cards)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    guard let self = self else { return }
+                    
+                    self.isLoading = false
+                    
+                    switch completion {
+                    case .finished:
+                        break
+                    case .failure(let error):
+                        self.toastSubject.send("匯出失敗：\(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { [weak self] fileURL in
+                    guard let self = self else { return }
+                    
+                    self.toastSubject.send("CSV 檔案匯出成功")
+                    
+                    // 觸發分享功能
+                    self.shareExportedFile(fileURL)
+                }
+            )
+            .store(in: &cancellables)
     }
     
     /// 匯出為 VCF 格式
     func exportAsVCF() {
         isLoading = true
         
-        // 模擬匯出操作
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            guard let self = self else { return }
-            
-            self.isLoading = false
-            self.toastSubject.send("VCF 檔案匯出成功")
-            // 實際實作會呼叫 exportService.exportAsVCF()
-        }
+        // 從 repository 取得所有名片資料
+        repository.fetchAll()
+            .mapError { _ in ExportError.createFileFailed }
+            .flatMap { [weak self] cards -> AnyPublisher<URL, ExportError> in
+                guard let self = self else {
+                    return Fail(error: ExportError.createFileFailed)
+                        .eraseToAnyPublisher()
+                }
+                
+                return self.exportService.exportAsVCard(cards: cards)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    guard let self = self else { return }
+                    
+                    self.isLoading = false
+                    
+                    switch completion {
+                    case .finished:
+                        break
+                    case .failure(let error):
+                        self.toastSubject.send("匯出失敗：\(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { [weak self] fileURL in
+                    guard let self = self else { return }
+                    
+                    self.toastSubject.send("VCF 檔案匯出成功")
+                    
+                    // 觸發分享功能
+                    self.shareExportedFile(fileURL)
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    /// 分享匯出的檔案
+    /// - Parameter fileURL: 檔案 URL
+    private func shareExportedFile(_ fileURL: URL) {
+        navigationSubject.send(.shareFile(fileURL))
     }
 }
 
@@ -252,6 +312,7 @@ class SettingsViewModel: ObservableObject {
 /// 設定頁面導航動作
 enum SettingsNavigationAction {
     case aiSettings
+    case shareFile(URL)
 }
 
 /// 設定頁面警告類型
