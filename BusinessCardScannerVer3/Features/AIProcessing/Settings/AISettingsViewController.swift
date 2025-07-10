@@ -47,12 +47,7 @@ class AISettingsViewController: UIViewController {
     }()
     
     private lazy var apiKeyFormField: FormFieldView = {
-        let field = FormFieldView()
-        field.title = "OpenAI API Key"
-        field.placeholder = "請輸入您的 OpenAI API Key (sk-...)"
-        field.isSecureTextEntry = true
-        field.isRequired = true
-        return field
+        return FormFieldView.makeAPIKey(required: true)
     }()
     
     private lazy var statusView: UIView = {

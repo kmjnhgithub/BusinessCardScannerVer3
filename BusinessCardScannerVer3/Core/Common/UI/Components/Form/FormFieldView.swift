@@ -394,4 +394,18 @@ extension FormFieldView {
         field.returnKeyType = .done
         return field
     }
+    
+    /// 建立 API Key 欄位
+    static func makeAPIKey(required: Bool = true) -> FormFieldView {
+        let field = FormFieldView()
+        field.title = "OpenAI API Key"
+        field.placeholder = "請輸入您的 OpenAI API Key (sk-...)"
+//        field.icon = UIImage(systemName: "key.fill")
+        field.isRequired = required
+        field.isSecureTextEntry = true
+        field.autocapitalizationType = .none
+        field.autocorrectionType = .no
+        field.returnKeyType = .done
+        return field
+    }
 }
