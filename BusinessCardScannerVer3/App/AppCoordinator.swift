@@ -300,6 +300,25 @@ extension AppCoordinator {
         }
     }
     
+    /// 切換到名片列表 Tab
+    private func switchToCardListTab() {
+        print("📱 AppCoordinator: 切換到名片列表 Tab")
+        
+        guard let tabBarController = navigationController.topViewController as? UITabBarController else {
+            print("❌ AppCoordinator: 無法找到 TabBarController")
+            return
+        }
+        
+        // 切換到名片列表 Tab (index = 0)
+        let cardListTabIndex = 0
+        if tabBarController.selectedIndex != cardListTabIndex {
+            tabBarController.selectedIndex = cardListTabIndex
+            print("✅ AppCoordinator: 已切換到名片列表 Tab")
+        } else {
+            print("ℹ️ AppCoordinator: 已在名片列表 Tab")
+        }
+    }
+    
     /// 通知 CardList 重新載入資料
     private func notifyCardListToRefresh() {
         print("🔄 AppCoordinator: 通知 CardList 重新載入資料")
@@ -325,13 +344,16 @@ extension AppCoordinator: CardCreationModuleOutput {
     func cardCreationDidFinish(with card: BusinessCard) {
         print("✅ AppCoordinator: 名片建立完成 - \(card.name)")
         
-        // 通知 CardList 重新載入資料
+        // 第一步：切換到名片列表 Tab
+        switchToCardListTab()
+        
+        // 第二步：通知 CardList 重新載入資料
         notifyCardListToRefresh()
         
-        // 清理協調器
+        // 第三步：清理協調器
         cleanupFinishedCoordinators()
         
-        // 顯示成功訊息
+        // 第四步：顯示成功訊息
         AlertPresenter.shared.showMessage(
             "名片「\(card.name)」已成功保存",
             title: "保存成功"
