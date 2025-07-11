@@ -235,11 +235,15 @@ private extension CardCreationCoordinator {
     
     /// 顯示相機
     func presentCamera() {
-        let cameraViewController = CameraViewController()
+        // 建立 CameraViewModel
+        let cameraViewModel = CameraViewModel()
+        
+        // 建立 CameraViewController
+        let cameraViewController = CameraViewController(viewModel: cameraViewModel)
         cameraViewController.delegate = self
         
         let navController = UINavigationController(rootViewController: cameraViewController)
-        navController.modalPresentationStyle = .fullScreen
+        navController.modalPresentationStyle = UIModalPresentationStyle.fullScreen
         
         currentViewController = navController
         navigationController.present(navController, animated: true)

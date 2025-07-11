@@ -224,8 +224,8 @@ final class TabBarCoordinator: BaseCoordinator {
 extension TabBarCoordinator: CardListModuleOutput {
     
     func cardListDidSelectCard(_ card: BusinessCard) {
-        // 處理名片選擇 - 委託給上層（AppCoordinator）
-        delegate?.tabBarCoordinator(self, didRequestModule: .cardDetail(card))
+        // 處理名片選擇 - 委託給上層（AppCoordinator）進行編輯
+        delegate?.tabBarCoordinator(self, didRequestModule: .cardEdit(card))
     }
     
     func cardListDidRequestNewCard() {

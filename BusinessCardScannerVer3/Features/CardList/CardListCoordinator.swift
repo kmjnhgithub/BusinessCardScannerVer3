@@ -85,9 +85,9 @@ final class CardListCoordinator: BaseCoordinator {
     
     // MARK: - Navigation Methods
     
-    /// 導航到名片詳情
-    private func showCardDetail(_ card: BusinessCard) {
-        print("🔍 導航到名片編輯: \(card.name)")
+    /// 導航到名片編輯
+    private func showCardEdit(_ card: BusinessCard) {
+        print("✏️ 導航到名片編輯: \(card.name)")
         
         // 建立 CardCreationCoordinator 用於編輯現有名片
         let serviceContainer = ServiceContainer.shared
@@ -230,7 +230,7 @@ extension ModuleFactory {
 extension CardListCoordinator: CardListCoordinatorDelegate {
     
     func cardListDidSelectCard(_ card: BusinessCard) {
-        showCardDetail(card)
+        showCardEdit(card)
     }
     
     func cardListDidRequestNewCard() {
@@ -240,7 +240,7 @@ extension CardListCoordinator: CardListCoordinatorDelegate {
     func cardListDidRequestEdit(_ card: BusinessCard) {
         print("✏️ 編輯名片: \(card.name)")
         // 直接呼叫編輯導航
-        showCardDetail(card)
+        showCardEdit(card)
     }
 }
 

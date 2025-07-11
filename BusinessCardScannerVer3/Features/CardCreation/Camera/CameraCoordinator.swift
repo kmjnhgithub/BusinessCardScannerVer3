@@ -49,8 +49,11 @@ final class CameraCoordinator: BaseCoordinator {
     private func setupCameraModule() {
         print("📸 CameraCoordinator: 啟動相機模組")
         
+        // 建立 ViewModel
+        let cameraViewModel = CameraViewModel()
+        
         // 建立相機視圖控制器
-        let cameraVC = CameraViewController()
+        let cameraVC = CameraViewController(viewModel: cameraViewModel)
         cameraVC.delegate = self
         self.cameraViewController = cameraVC
         

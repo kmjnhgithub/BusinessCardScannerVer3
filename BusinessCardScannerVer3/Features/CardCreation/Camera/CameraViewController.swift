@@ -2,7 +2,7 @@
 //  CameraViewController.swift
 //  BusinessCardScannerVer3
 //
-//  相機拍攝視圖控制器
+//  相機拍攝視圖控制器 - 純 UI 層，業務邏輯由 CameraViewModel 處理
 //
 
 import UIKit
@@ -24,6 +24,9 @@ class CameraViewController: BaseViewController {
     
     weak var delegate: CameraViewControllerDelegate?
     
+    /// ViewModel
+    private let viewModel: CameraViewModel
+    
     /// 支援的螢幕方向 - 只支援直式
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return .portrait
@@ -33,13 +36,8 @@ class CameraViewController: BaseViewController {
         return false
     }
     
-    /// 相機會話管理
-    private var captureSession: AVCaptureSession?
-    private var photoOutput: AVCapturePhotoOutput?
+    /// 視頻預覽層
     private var videoPreviewLayer: AVCaptureVideoPreviewLayer?
-    
-    /// 當前設備
-    private var currentDevice: AVCaptureDevice?
     
     // MARK: - UI Components
     
@@ -66,6 +64,15 @@ class CameraViewController: BaseViewController {
     
     // MARK: - Initialization
     
+    init(viewModel: CameraViewModel) {
+        self.viewModel = viewModel
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "拍攝名片"
@@ -86,8 +93,8 @@ class CameraViewController: BaseViewController {
             UIViewController.attemptRotationToDeviceOrientation()
         }
         
-        // 檢查權限並設定相機
-        checkPermissionAndSetupCamera()
+        // 初始化相機（透過 ViewModel）
+        viewModel.initializeCamera()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -99,8 +106,8 @@ class CameraViewController: BaseViewController {
         // 恢復螢幕方向設定
         AppDelegate.orientationLock = .all
         
-        // 停止相機會話
-        stopCameraSession()
+        // 停止相機會話（透過 ViewModel）
+        viewModel.stopCameraSession()
     }
     
     // MARK: - Setup Methods
@@ -181,6 +188,110 @@ class CameraViewController: BaseViewController {
         captureButton.addTarget(self, action: #selector(captureButtonTapped), for: .touchUpInside)
         cancelButton.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         galleryButton.addTarget(self, action: #selector(galleryButtonTapped), for: .touchUpInside)
+        
+        // 綁定 ViewModel 狀態
+        setupViewModelBindings()
+    }
+    
+    // MARK: - ViewModel Bindings
+    
+    private func setupViewModelBindings() {
+        // 綁定相機狀態
+        viewModel.$cameraStatus
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                self?.updateCameraStatus(status)
+            }
+            .store(in: &cancellables)
+        
+        // 綁定狀態訊息
+        viewModel.$statusMessage
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] message in
+                self?.updateStatusMessage(message)
+            }
+            .store(in: &cancellables)
+        
+        // 綁定控制按鈕狀態
+        viewModel.$controlsEnabled
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                self?.updateControlsEnabled(enabled)
+            }
+            .store(in: &cancellables)
+        
+        // 綁定拍攝的照片
+        viewModel.$capturedImage
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] image in
+                if let image = image {
+                    self?.handleCapturedImage(image)
+                }
+            }
+            .store(in: &cancellables)
+        
+        // 當相機狀態變為 ready 時設定預覽層
+        viewModel.$cameraStatus
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                if case .ready = status {
+                    self?.setupPreviewLayerIfNeeded()
+                    self?.viewModel.startCameraSession()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    // MARK: - Status Update Methods
+    
+    private func updateCameraStatus(_ status: CameraStatus) {
+        switch status {
+        case .initializing:
+            statusLabel.isHidden = false
+            guideView.isHidden = true
+            
+        case .permissionDenied:
+            statusLabel.isHidden = false
+            guideView.isHidden = true
+            
+        case .configuring:
+            statusLabel.isHidden = false
+            guideView.isHidden = true
+            
+        case .ready:
+            statusLabel.isHidden = true
+            guideView.isHidden = false
+            guideView.resetToDefault()
+            
+        case .error:
+            statusLabel.isHidden = false
+            guideView.isHidden = true
+            
+        case .capturing:
+            // 拍照動畫將在按鈕動作中處理
+            break
+            
+        case .captured:
+            guideView.showSuccessState()
+        }
+    }
+    
+    private func updateStatusMessage(_ message: String) {
+        statusLabel.text = message
+        statusLabel.isHidden = message.isEmpty
+    }
+    
+    private func updateControlsEnabled(_ enabled: Bool) {
+        captureButton.isEnabled = enabled
+        galleryButton.isEnabled = enabled
+    }
+    
+    private func handleCapturedImage(_ image: UIImage) {
+        // 延遲後通知代理
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            self.delegate?.cameraViewController(self, didCaptureImage: image)
+        }
     }
     
     // MARK: - UI Setup Helpers
@@ -226,86 +337,11 @@ class CameraViewController: BaseViewController {
         previewContainer.addSubview(statusLabel)
     }
     
-    // MARK: - Camera Setup
+    // MARK: - Preview Layer Setup
     
-    private func checkPermissionAndSetupCamera() {
-        let permissionManager = ServiceContainer.shared.permissionManager
-        
-        // 檢查權限狀態
-        switch permissionManager.cameraPermissionStatus() {
-        case .authorized:
-            setupCamera()
-        case .denied, .restricted:
-            showPermissionDeniedStatus()
-        case .notDetermined:
-            // 請求權限
-            permissionManager.requestCameraPermission { [weak self] status in
-                DispatchQueue.main.async {
-                    switch status {
-                    case .authorized:
-                        self?.setupCamera()
-                    default:
-                        self?.showPermissionDeniedStatus()
-                    }
-                }
-            }
-        }
-    }
-    
-    private func setupCamera() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.configureCameraSession()
-        }
-    }
-    
-    private func configureCameraSession() {
-        guard captureSession == nil else { return }
-        
-        let session = AVCaptureSession()
-        session.sessionPreset = .photo
-        
-        // 設定相機輸入
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let input = try? AVCaptureDeviceInput(device: device) else {
-            DispatchQueue.main.async { [weak self] in
-                self?.showCameraError("無法存取相機設備")
-            }
-            return
-        }
-        
-        currentDevice = device
-        
-        if session.canAddInput(input) {
-            session.addInput(input)
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.showCameraError("無法配置相機輸入")
-            }
-            return
-        }
-        
-        // 設定照片輸出
-        let output = AVCapturePhotoOutput()
-        if session.canAddOutput(output) {
-            session.addOutput(output)
-            photoOutput = output
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.showCameraError("無法配置照片輸出")
-            }
-            return
-        }
-        
-        captureSession = session
-        
-        DispatchQueue.main.async { [weak self] in
-            self?.setupPreviewLayer()
-            self?.startCameraSession()
-        }
-    }
-    
-    private func setupPreviewLayer() {
-        guard let session = captureSession else { return }
+    private func setupPreviewLayerIfNeeded() {
+        guard videoPreviewLayer == nil,
+              let session = viewModel.getCaptureSession() else { return }
         
         let previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
@@ -314,26 +350,10 @@ class CameraViewController: BaseViewController {
         previewContainer.layer.addSublayer(previewLayer)
         videoPreviewLayer = previewLayer
         
-        // 隱藏狀態標籤，顯示掃描引導
-        statusLabel.isHidden = true
-        guideView.isHidden = false
+        print("✅ CameraViewController: 預覽層設定完成")
     }
     
-    private func startCameraSession() {
-        guard let session = captureSession, !session.isRunning else { return }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            session.startRunning()
-        }
-    }
-    
-    private func stopCameraSession() {
-        guard let session = captureSession, session.isRunning else { return }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            session.stopRunning()
-        }
-    }
+    // MARK: - Layout
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
@@ -345,7 +365,11 @@ class CameraViewController: BaseViewController {
     // MARK: - Button Actions
     
     @objc private func captureButtonTapped() {
-        capturePhoto()
+        // 顯示拍照動畫
+        showCaptureAnimation()
+        
+        // 透過 ViewModel 拍攝照片
+        viewModel.capturePhoto()
     }
     
     @objc private func cancelButtonTapped() {
@@ -356,8 +380,8 @@ class CameraViewController: BaseViewController {
         // 切換到相簿選擇
         print("📁 切換到相簿選擇")
         
-        // 停止相機會話
-        stopCameraSession()
+        // 停止相機會話（透過 ViewModel）
+        viewModel.stopCameraSession()
         
         // 通知 delegate 請求切換到相簿選擇
         delegate?.cameraViewControllerDidRequestGallery(self)
@@ -375,30 +399,7 @@ class CameraViewController: BaseViewController {
         }
     }
     
-    // MARK: - Photo Capture
-    
-    private func capturePhoto() {
-        guard let output = photoOutput else {
-            showCameraError("相機未就緒")
-            return
-        }
-        
-        // 建立照片設定
-        let settings: AVCapturePhotoSettings
-        
-        // 設定照片格式
-        if output.availablePhotoCodecTypes.contains(.jpeg) {
-            settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
-        } else {
-            settings = AVCapturePhotoSettings()
-        }
-        
-        // 拍攝照片
-        output.capturePhoto(with: settings, delegate: self)
-        
-        // 拍照動畫效果
-        showCaptureAnimation()
-    }
+    // MARK: - Animation
     
     private func showCaptureAnimation() {
         let flashView = UIView(frame: view.bounds)
@@ -417,54 +418,4 @@ class CameraViewController: BaseViewController {
         }
     }
     
-    // MARK: - Error Handling
-    
-    private func showPermissionDeniedStatus() {
-        statusLabel.text = "需要相機權限才能拍攝名片\n請到設定中開啟相機權限"
-        statusLabel.isHidden = false
-        
-        // 隱藏相機控制按鈕
-        captureButton.isEnabled = false
-        galleryButton.isEnabled = false
-        
-        // 隱藏掃描引導
-        guideView.isHidden = true
-    }
-    
-    private func showCameraError(_ message: String) {
-        statusLabel.text = message
-        statusLabel.isHidden = false
-        
-        print("❌ 相機錯誤: \(message)")
-    }
-}
-
-// MARK: - AVCapturePhotoCaptureDelegate
-
-extension CameraViewController: AVCapturePhotoCaptureDelegate {
-    
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        if let error = error {
-            print("❌ 拍照失敗: \(error.localizedDescription)")
-            showCameraError("拍照失敗，請重試")
-            return
-        }
-        
-        guard let data = photo.fileDataRepresentation(),
-              let image = UIImage(data: data) else {
-            print("❌ 無法處理照片數據")
-            showCameraError("照片處理失敗")
-            return
-        }
-        
-        print("✅ 照片拍攝成功")
-        
-        // 顯示成功狀態
-        guideView.showSuccessState()
-        
-        // 延遲後通知代理
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.delegate?.cameraViewController(self, didCaptureImage: image)
-        }
-    }
 }

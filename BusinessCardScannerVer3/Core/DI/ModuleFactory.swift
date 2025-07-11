@@ -62,17 +62,6 @@ final class ModuleFactory {
         )
     }
     
-    // MARK: - Card Detail Module
-    
-    /// 建立名片詳情模組
-    func makeCardDetailModule() -> CardDetailModulable {
-        return CardDetailModule(
-            repository: serviceContainer.businessCardRepository,
-            photoService: serviceContainer.photoService,
-            exportService: serviceContainer.exportService,
-            cardCreationModule: makeCardCreationModule()
-        )
-    }
     
     // MARK: - AI Processing Module
     
@@ -145,17 +134,6 @@ private struct CardCreationModule: CardCreationModulable {
     }
 }
 
-private struct CardDetailModule: CardDetailModulable {
-    let repository: BusinessCardRepository
-    let photoService: PhotoService
-    let exportService: ExportService
-    let cardCreationModule: CardCreationModulable
-    
-    func makeCoordinator(navigationController: UINavigationController, card: BusinessCard) -> Coordinator {
-        // 實際實作會在 Features/CardDetail/CardDetailCoordinator.swift
-        return PlaceholderCoordinator(navigationController: navigationController)
-    }
-}
 
 private struct AIProcessingModule: AIProcessingModulable {
     let openAIService: OpenAIService

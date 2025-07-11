@@ -115,9 +115,9 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
         case .settings:
             // Settings 模組透過 TabBar 正常運作，無需特殊處理
             break
-        case .cardDetail(let card):
-            // 處理名片詳情模組請求
-            handleCardDetailModule(card: card)
+        case .cardEdit(let card):
+            // 處理名片編輯請求
+            handleCardEditModule(card: card)
         case .cardCreation(let option):
             // 處理名片建立模組請求（+ 按鈕選單選項）
             handleCardCreationModule(with: option)
@@ -158,15 +158,15 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
         }
     }
     
-    /// 處理名片詳情模組請求
-    private func handleCardDetailModule(card: BusinessCard) {
-        print("📋 AppCoordinator: 顯示名片詳情 - \(card.name)")
+    /// 處理名片編輯請求
+    private func handleCardEditModule(card: BusinessCard) {
+        print("✏️ AppCoordinator: 顯示名片編輯 - \(card.name)")
         
         guard let currentNavigationController = getCurrentTabNavigationController() else {
             return
         }
         
-        // 這裡應該啟動 CardDetail 模組，目前先使用 CardCreation 的編輯模式
+        // 使用 CardCreation 模組的編輯模式進行名片編輯
         presentCardCreationModule(from: currentNavigationController, sourceType: .manual, editingCard: card)
     }
     
@@ -276,7 +276,7 @@ extension AppCoordinator: TabBarCoordinatorDelegate {
 enum AppModule {
     case camera
     case settings
-    case cardDetail(BusinessCard)
+    case cardEdit(BusinessCard)
     case cardCreation(AddCardOption)
 }
 
