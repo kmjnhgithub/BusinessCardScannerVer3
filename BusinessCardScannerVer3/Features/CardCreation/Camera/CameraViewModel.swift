@@ -4,6 +4,11 @@
 //
 //  相機模組 ViewModel - 管理相機業務邏輯和狀態
 //
+//  TODO: 架構優化 - Protocol-Oriented Programming 重構
+//  目前因 AVCapturePhotoCaptureDelegate 需要 NSObject，無法繼承 BaseViewModel
+//  未來計劃重構為 Protocol 架構以實現完整架構一致性
+//  詳細討論過程見：修復歷史.md "CameraViewModel 架構設計決策"
+//
 
 import UIKit
 import AVFoundation
