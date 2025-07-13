@@ -18,19 +18,19 @@ enum APIKeyValidationStatus {
 
 /// AI 設定頁面視圖模型
 /// 負責 API Key 管理的業務邏輯
-class AISettingsViewModel: ObservableObject {
+class AISettingsViewModel: BaseViewModel {
     
     // MARK: - Published Properties
     
     @Published var currentAPIKey: String? = nil
     @Published var validationStatus: APIKeyValidationStatus = .notSet
-    @Published var isLoading: Bool = false
+    // 移除: @Published var isLoading (使用繼承的)
     
     // MARK: - Private Properties
     
     private let openAIService: OpenAIService
     private var inputAPIKey: String = ""
-    private var cancellables = Set<AnyCancellable>()
+    // 移除: private var cancellables (使用繼承的)
     
     // MARK: - Publishers
     
@@ -49,7 +49,8 @@ class AISettingsViewModel: ObservableObject {
     
     init(openAIService: OpenAIService) {
         self.openAIService = openAIService
-        setupBindings()
+        super.init()  // 自動呼叫 override setupBindings()
+        // 移除: setupBindings()  ← 刪除重複呼叫
     }
     
     // MARK: - Public Methods
@@ -113,7 +114,7 @@ class AISettingsViewModel: ObservableObject {
     
     // MARK: - Private Methods
     
-    private func setupBindings() {
+    override func setupBindings() {
         // 監聽輸入變化，即時驗證格式
         $currentAPIKey
             .sink { [weak self] _ in
