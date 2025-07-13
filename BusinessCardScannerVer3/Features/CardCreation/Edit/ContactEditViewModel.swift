@@ -120,12 +120,12 @@ class ContactEditViewModel: BaseViewModel {
         self.currentPhoto = initialPhoto
         self.photo = initialPhoto
         
-        super.init()
+        super.init()  // 自動呼叫 override setupBindings()
         
         // 設定初始編輯狀態
         setInitialEditingState()
         
-        setupBindings()
+        // 移除: setupBindings()  ← 刪除重複呼叫
         loadPhotoIfNeeded()
         
         // 確保初始資料在 Combine 綁定建立後觸發 UI 更新

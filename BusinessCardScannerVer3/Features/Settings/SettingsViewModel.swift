@@ -49,21 +49,21 @@ enum SettingItemType {
 
 /// 設定頁面視圖模型
 /// 負責設定頁面的業務邏輯和狀態管理
-class SettingsViewModel: ObservableObject {
+class SettingsViewModel: BaseViewModel {
     
     // MARK: - Published Properties
     
     @Published var isAIEnabled: Bool = false
     @Published var aiStatusText: String = "未設定"
     @Published var totalCardsCount: Int = 0
-    @Published var isLoading: Bool = false
+    // 移除: @Published var isLoading (使用繼承的)
     
     // MARK: - Private Properties
     
     private let repository: BusinessCardRepository
     private let exportService: ExportService
     private let aiProcessingModule: AIProcessingModulable?
-    private var cancellables = Set<AnyCancellable>()
+    // 移除: private var cancellables (使用繼承的)
     
     // MARK: - Publishers
     
@@ -94,7 +94,8 @@ class SettingsViewModel: ObservableObject {
         self.exportService = exportService
         self.aiProcessingModule = aiProcessingModule
         
-        setupBindings()
+        super.init()  // 自動呼叫 override setupBindings()
+        // 移除: setupBindings()  ← 刪除重複呼叫
         loadInitialData()
     }
     
@@ -172,7 +173,7 @@ class SettingsViewModel: ObservableObject {
     
     // MARK: - Private Methods
     
-    private func setupBindings() {
+    override func setupBindings() {
         // 初始設定時不需要持續監聽，只在需要時更新
         // 如果需要即時更新，可以設置定時器或通知機制
     }
