@@ -34,9 +34,8 @@ class CardListViewModel: BaseViewModel {
     
     init(repository: BusinessCardRepository) {
         self.repository = repository
-        super.init()
-        
-        setupBindings()
+        super.init()  // 自動呼叫 override setupBindings()
+        // 移除: setupBindings()  ← 刪除重複呼叫
         loadCards() // 載入真實資料
     }
     
