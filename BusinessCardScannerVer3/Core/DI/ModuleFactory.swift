@@ -91,7 +91,8 @@ final class ModuleFactory {
             repository: serviceContainer.businessCardRepository,
             photoService: serviceContainer.photoService,
             exportService: serviceContainer.exportService,
-            aiProcessingModule: makeAIProcessingModule()
+            aiProcessingModule: makeAIProcessingModule(),
+            animationPreferences: serviceContainer.animationPreferences
         )
     }
     
@@ -155,6 +156,7 @@ private struct SettingsModule: SettingsModulable {
     let photoService: PhotoService
     let exportService: ExportService
     let aiProcessingModule: AIProcessingModulable?
+    let animationPreferences: AnimationPreferences
     
     func makeCoordinator(navigationController: UINavigationController) -> Coordinator {
         // 使用真正的 SettingsCoordinator
@@ -163,6 +165,7 @@ private struct SettingsModule: SettingsModulable {
             repository: repository,
             exportService: exportService,
             aiProcessingModule: aiProcessingModule,
+            animationPreferences: animationPreferences,
             moduleFactory: ModuleFactory()
         )
     }

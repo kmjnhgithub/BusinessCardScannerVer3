@@ -39,6 +39,9 @@ class CardListViewController: BaseViewController {
     /// PhotoService 用於載入名片照片
     private var photoService: PhotoServiceProtocol!
     
+    /// 名片列表動畫處理器
+    private let cardListAnimator = CardListAnimator()
+    
     /// Coordinator 委託 - 用於處理導航
     weak var coordinatorDelegate: CardListCoordinatorDelegate?
     
@@ -72,6 +75,16 @@ class CardListViewController: BaseViewController {
         // 遵循 MVVM 原則：View 不主動觸發業務邏輯
         // ViewModel 透過 Combine 和 NotificationCenter 自動管理狀態
         // 如需重新載入，應由 Coordinator 或特定事件觸發
+        
+        // 動畫觸發：純UI行為，符合生命週期管理原則
+        triggerAnimationIfNeeded()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        // 停止所有動畫以節省資源
+        cardListAnimator.stopAllAnimations()
     }
     
     // MARK: - Setup
@@ -201,13 +214,48 @@ class CardListViewController: BaseViewController {
     
     // MARK: - UI Updates
     
+    /// 檢查並觸發動畫（如果需要）
+    /// - Note: 在 viewWillAppear 中調用，確保每次進入頁面都有動畫效果
+    private func triggerAnimationIfNeeded() {
+        // 延遲執行，確保視圖已完全顯示
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 檢查是否有資料且 TableView 可見
+            let hasCards = !self.viewModel.filteredCards.isEmpty
+            let isTableViewVisible = !self.tableView.isHidden
+            
+            guard hasCards && isTableViewVisible else {
+                return
+            }
+            
+            // 觸發進場動畫
+            self.cardListAnimator.animateCardListAppearance(
+                tableView: self.tableView,
+                cellCount: self.viewModel.filteredCards.count
+            )
+        }
+    }
+    
     /// 更新表格視圖
     private func updateTableView(with cards: [BusinessCard]) {
         let hasCards = !cards.isEmpty
         tableView.isHidden = !hasCards
         
         if hasCards {
+            // 首先重新載入 TableView 資料
             tableView.reloadData()
+            
+            // 確保 TableView 佈局已完成，然後執行動畫
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                
+                // 使用動畫器執行進場動畫
+                self.cardListAnimator.animateCardListAppearance(
+                    tableView: self.tableView,
+                    cellCount: cards.count
+                )
+            }
         }
     }
     

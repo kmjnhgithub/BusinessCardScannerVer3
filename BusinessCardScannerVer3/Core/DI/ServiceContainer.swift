@@ -51,6 +51,10 @@ final class ServiceContainer {
         return ValidationService.shared
     }()
     
+    private(set) lazy var animationPreferences: AnimationPreferences = {
+        return AnimationPreferences.shared
+    }()
+    
     // MARK: - Feature Services
     
     /// CardCreation 模組的服務

@@ -17,6 +17,7 @@ final class SettingsCoordinator: BaseCoordinator {
     private let repository: BusinessCardRepository
     private let exportService: ExportService
     private let aiProcessingModule: AIProcessingModulable?
+    private let animationPreferences: AnimationPreferences
     private let moduleFactory: ModuleFactory
     
     /// 設定模組輸出代理
@@ -30,17 +31,20 @@ final class SettingsCoordinator: BaseCoordinator {
     ///   - repository: 名片資料庫
     ///   - exportService: 匯出服務
     ///   - aiProcessingModule: AI 處理模組（可選）
+    ///   - animationPreferences: 動畫偏好設定服務
     ///   - moduleFactory: 模組工廠
     init(
         navigationController: UINavigationController,
         repository: BusinessCardRepository,
         exportService: ExportService,
         aiProcessingModule: AIProcessingModulable?,
+        animationPreferences: AnimationPreferences,
         moduleFactory: ModuleFactory
     ) {
         self.repository = repository
         self.exportService = exportService
         self.aiProcessingModule = aiProcessingModule
+        self.animationPreferences = animationPreferences
         self.moduleFactory = moduleFactory
         super.init(navigationController: navigationController)
     }
@@ -71,7 +75,8 @@ final class SettingsCoordinator: BaseCoordinator {
         let viewModel = SettingsViewModel(
             repository: repository,
             exportService: exportService,
-            aiProcessingModule: aiProcessingModule
+            aiProcessingModule: aiProcessingModule,
+            animationPreferences: animationPreferences
         )
         
         // 建立 ViewController
@@ -122,6 +127,7 @@ extension SettingsCoordinator {
             repository: dependencies.businessCardRepository,
             exportService: dependencies.exportService,
             aiProcessingModule: ModuleFactory().makeAIProcessingModule(),
+            animationPreferences: dependencies.animationPreferences,
             moduleFactory: ModuleFactory()
         )
     }

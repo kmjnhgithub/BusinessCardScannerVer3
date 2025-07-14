@@ -312,6 +312,9 @@ class SettingsViewController: BaseViewController {
     
     private func handleAlert(_ alertType: SettingsAlertType) {
         switch alertType {
+        case .toggleCardListAnimation:
+            showCardListAnimationToggle()
+            
         case .confirmClearData:
             showClearDataConfirmation()
             
@@ -327,6 +330,28 @@ class SettingsViewController: BaseViewController {
         case .showAbout:
             showAboutInfo()
         }
+    }
+    
+    private func showCardListAnimationToggle() {
+        let currentStatus = viewModel.isCardListAnimationEnabled
+        let actionTitle = currentStatus ? "停用動畫" : "啟用動畫"
+        let message = currentStatus ? 
+            "停用後，進入名片列表時將不會顯示依序浮現動畫。" : 
+            "啟用後，進入名片列表時名片將依序浮現，讓介面更生動。"
+        
+        let actions: [AlertPresenter.AlertAction] = [
+            .default(actionTitle) { [weak self] in
+                self?.viewModel.toggleCardListAnimation()
+            },
+            .cancel("取消", nil)
+        ]
+        
+        AlertPresenter.shared.showActionSheet(
+            title: "名片列表動畫",
+            message: message,
+            actions: actions,
+            sourceView: view
+        )
     }
     
     private func showClearDataConfirmation() {

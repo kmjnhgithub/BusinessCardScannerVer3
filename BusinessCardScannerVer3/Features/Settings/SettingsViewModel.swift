@@ -11,12 +11,14 @@ import Combine
 
 /// 設定項目類型
 enum SettingItemType {
+    case cardListAnimation // 名片列表動畫
     case exportData        // 匯出資料
     case clearData         // 清除資料
     case about             // 關於我們
     
     var title: String {
         switch self {
+        case .cardListAnimation: return "名片列表動畫"
         case .exportData: return "匯出資料"
         case .clearData: return "清除所有資料"
         case .about: return "關於我們"
@@ -25,6 +27,7 @@ enum SettingItemType {
     
     var subtitle: String? {
         switch self {
+        case .cardListAnimation: return "進入名片列表時的依序浮現動畫"
         case .exportData: return "匯出為 CSV 或 VCF 格式"
         case .clearData: return "刪除所有已儲存的名片資料"
         case .about: return "版本資訊和開發者資料"
@@ -33,6 +36,7 @@ enum SettingItemType {
     
     var icon: String {
         switch self {
+        case .cardListAnimation: return "sparkles"
         case .exportData: return "square.and.arrow.up"
         case .clearData: return "trash"
         case .about: return "info.circle"
@@ -56,6 +60,7 @@ class SettingsViewModel: BaseViewModel {
     @Published var isAIEnabled: Bool = false
     @Published var aiStatusText: String = "未設定"
     @Published var totalCardsCount: Int = 0
+    @Published var isCardListAnimationEnabled: Bool = false
     // 移除: @Published var isLoading (使用繼承的)
     
     // MARK: - Private Properties
@@ -63,6 +68,7 @@ class SettingsViewModel: BaseViewModel {
     private let repository: BusinessCardRepository
     private let exportService: ExportService
     private let aiProcessingModule: AIProcessingModulable?
+    private let animationPreferences: AnimationPreferences
     // 移除: private var cancellables (使用繼承的)
     
     // MARK: - Publishers
@@ -88,11 +94,13 @@ class SettingsViewModel: BaseViewModel {
     init(
         repository: BusinessCardRepository,
         exportService: ExportService,
-        aiProcessingModule: AIProcessingModulable?
+        aiProcessingModule: AIProcessingModulable?,
+        animationPreferences: AnimationPreferences = AnimationPreferences.shared
     ) {
         self.repository = repository
         self.exportService = exportService
         self.aiProcessingModule = aiProcessingModule
+        self.animationPreferences = animationPreferences
         
         super.init()  // 自動呼叫 override setupBindings()
         // 移除: setupBindings()  ← 刪除重複呼叫
@@ -105,12 +113,16 @@ class SettingsViewModel: BaseViewModel {
     func loadInitialData() {
         loadAIConfiguration()
         loadCardsCount()
+        loadAnimationConfiguration()
     }
     
     /// 處理設定項目點擊
     /// - Parameter item: 設定項目類型
     func handleSettingItemTap(_ item: SettingItemType) {
         switch item {
+        case .cardListAnimation:
+            alertSubject.send(.toggleCardListAnimation)
+            
         case .exportData:
             handleExportData()
             
@@ -130,6 +142,15 @@ class SettingsViewModel: BaseViewModel {
         updateAIStatusText()
         
         let message = enabled ? "AI 智慧解析已啟用" : "AI 智慧解析已停用"
+        toastSubject.send(message)
+    }
+    
+    /// 切換名片列表動畫開關
+    func toggleCardListAnimation() {
+        let newValue = !isCardListAnimationEnabled
+        animationPreferences.toggleCardListAnimation(newValue)
+        
+        let message = newValue ? "名片列表動畫已啟用" : "名片列表動畫已停用"
         toastSubject.send(message)
     }
     
@@ -174,13 +195,19 @@ class SettingsViewModel: BaseViewModel {
     // MARK: - Private Methods
     
     override func setupBindings() {
-        // 初始設定時不需要持續監聽，只在需要時更新
-        // 如果需要即時更新，可以設置定時器或通知機制
+        // 監聽動畫偏好設定變化
+        animationPreferences.$isCardListAnimationEnabled
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$isCardListAnimationEnabled)
     }
     
     private func loadAIConfiguration() {
         isAIEnabled = UserDefaults.standard.bool(forKey: "aiProcessingEnabled")
         updateAIStatusText()
+    }
+    
+    private func loadAnimationConfiguration() {
+        isCardListAnimationEnabled = animationPreferences.isCardListAnimationEnabled
     }
     
     private func loadCardsCount() {
@@ -318,6 +345,7 @@ enum SettingsNavigationAction {
 
 /// 設定頁面警告類型
 enum SettingsAlertType {
+    case toggleCardListAnimation
     case confirmClearData
     case noDataToExport
     case selectExportFormat
@@ -330,7 +358,7 @@ extension SettingsViewModel {
     
     /// 取得所有設定項目
     var settingItems: [SettingItemType] {
-        return [.exportData, .clearData, .about]
+        return [.cardListAnimation, .exportData, .clearData, .about]
     }
     
     /// 取得應用程式版本資訊
