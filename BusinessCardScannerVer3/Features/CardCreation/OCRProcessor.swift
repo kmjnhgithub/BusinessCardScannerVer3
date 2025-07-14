@@ -44,14 +44,15 @@ class OCRProcessor {
         let preprocessedImage = preprocessImage(image)
         
         // 2. 執行 OCR
-        visionService.recognizeText(from: preprocessedImage) { [weak self] result in
+        visionService.recognizeText(from: preprocessedImage) { [self] result in
             switch result {
             case .success(let ocrResult):
                 // 3. 後處理文字
-                let preprocessedText = self?.preprocessText(ocrResult.recognizedText) ?? ocrResult.recognizedText
+                let preprocessedText = self.preprocessText(ocrResult.recognizedText)
                 
                 // 4. 提取欄位
-                let extractedFields = self?.extractBusinessCardFields(from: ocrResult) ?? [:]
+                let extractedFields = self.extractBusinessCardFields(from: ocrResult)
+                print("🔬 OCRProcessor: 欄位提取完成，數量: \(extractedFields.count)")
                 
                 // 5. 建立最終結果
                 let processingResult = OCRProcessingResult(
@@ -223,13 +224,29 @@ class OCRProcessor {
         // 移除多餘的空格和符號
         correctedText = correctedText.replacingOccurrences(of: " +", with: " ", options: .regularExpression)
         
-        // 修正常見的中文 OCR 錯誤
+        // 修正常見的中文 OCR 錯誤（擴充版）
         let chineseCorrections: [String: String] = [
+            // 基本字符修正
             "囗": "口",  // 囗 經常被誤識為 口
             "苗": "田",  // 在地址中可能混淆
             "丿": "",    // 移除多餘的撇
             "乀": "",    // 移除多餘的點
-            " ": "",     // 移除中文文字中的空格
+            
+            // 人名相關修正
+            "勤": "勤",  // 確保正確的勤字
+            "德": "德",  // 確保正確的德字
+            
+            // 職位相關修正
+            "栽": "裁",  // 總栽 → 總裁
+            "哉": "裁",  // 總哉 → 總裁
+            "埋": "理",  // 經埋 → 經理
+            "肋": "助",  // 特肋 → 特助
+            "勘": "助",  // 特勘 → 特助
+            "衍": "行",  // 執衍長 → 執行長
+            
+            // 公司相關修正
+            "集園": "集團", // 集園 → 集團
+            "集困": "集團", // 集困 → 集團
         ]
         
         // 注意：英文 OCR 修正功能暫時移除以避免過度修正
@@ -316,8 +333,10 @@ class OCRProcessor {
     /// 從 OCR 結果提取名片欄位
     /// - Parameter ocrResult: OCR 識別結果
     /// - Returns: 提取的欄位字典
-    private func extractBusinessCardFields(from ocrResult: OCRResult) -> [String: String] {
-        print("🏷️ OCRProcessor: 提取名片欄位")
+    internal func extractBusinessCardFields(from ocrResult: OCRResult) -> [String: String] {
+        print("🚨 OCRProcessor: 【開始】提取名片欄位")
+        print("🔬 OCRProcessor: 輸入文字長度: \(ocrResult.recognizedText.count)")
+        print("🔬 OCRProcessor: 邊界框數量: \(ocrResult.boundingBoxes.count)")
         
         let text = ocrResult.recognizedText
         var extractedFields: [String: String] = [:]
@@ -339,7 +358,9 @@ class OCRProcessor {
         extractedFields["company"] = extractCompanyName(from: ocrResult)
         
         // 提取人名（基於位置推測）
+        print("🔬 OCRProcessor: 開始提取人名...")
         extractedFields["name"] = extractPersonName(from: ocrResult)
+        print("🔬 OCRProcessor: 人名提取完成，結果: '\(extractedFields["name"] ?? "nil")'")
         
         // 提取職位
         extractedFields["title"] = extractJobTitle(from: text)
@@ -348,6 +369,7 @@ class OCRProcessor {
         extractedFields["address"] = extractAddress(from: text)
         
         print("📊 提取到 \(extractedFields.count) 個欄位")
+        print("🚨 OCRProcessor: 【結束】提取名片欄位")
         
         return extractedFields
     }
@@ -374,15 +396,17 @@ class OCRProcessor {
         
         var results = extractWithPatterns(from: text, patterns: phonePatterns)
         
-        // 從關鍵字後提取電話號碼
-        let phoneKeywords = ["電話", "Tel", "Phone", "手機", "Mobile", "Cell"]
+        // 從關鍵字後提取電話號碼（改進版）
+        let phoneKeywords = ["電話", "Tel", "Phone", "手機", "Mobile", "Cell", "Fax"]
         for keyword in phoneKeywords {
-            if let regex = try? NSRegularExpression(pattern: "\\b\(keyword)[：:﹕︰]?\\s*([\\d\\s\\-\\(\\)\\+]{8,15})", options: .caseInsensitive) {
+            // 更寬鬆的模式，支援更多格式
+            if let regex = try? NSRegularExpression(pattern: "\\b\(keyword)[：:﹕︰\\s]*([\\d\\s\\-\\(\\)\\+]{8,20})", options: .caseInsensitive) {
                 let matches = regex.matches(in: text, options: [], range: NSRange(text.startIndex..., in: text))
                 for match in matches {
                     if match.numberOfRanges > 1, let range = Range(match.range(at: 1), in: text) {
                         let phone = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
                         if !phone.isEmpty {
+                            print("📞 從關鍵字 '\(keyword)' 提取到電話: '\(phone)'")
                             results.append(phone)
                         }
                     }
@@ -424,27 +448,34 @@ class OCRProcessor {
         var mobilePhone: String? = nil
         
         for phone in phoneNumbers {
-            let cleanPhone = phone.replacingOccurrences(of: "[^\\d+]", with: "", options: .regularExpression)
+            // 保留原始格式，用於判斷的清理版本
+            let cleanPhoneForCheck = phone.replacingOccurrences(of: "[^\\d+]", with: "", options: .regularExpression)
+            let originalPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            print("📞 OCRProcessor: 分析電話號碼 '\(originalPhone)' (清理後: '\(cleanPhoneForCheck)')")
             
             // 判斷是否為手機號碼
-            if cleanPhone.hasPrefix("09") || cleanPhone.hasPrefix("+8869") || cleanPhone.hasPrefix("8869") {
+            if cleanPhoneForCheck.hasPrefix("09") || cleanPhoneForCheck.hasPrefix("+8869") || cleanPhoneForCheck.hasPrefix("8869") {
                 if mobilePhone == nil {
-                    mobilePhone = phone
+                    mobilePhone = originalPhone  // 保留原始格式
+                    print("📱 設定手機號碼: '\(originalPhone)'")
                 }
             } else {
                 // 判斷是否為市內電話
-                if (cleanPhone.hasPrefix("02") || cleanPhone.hasPrefix("03") || cleanPhone.hasPrefix("04") || 
-                    cleanPhone.hasPrefix("05") || cleanPhone.hasPrefix("06") || cleanPhone.hasPrefix("07") || 
-                    cleanPhone.hasPrefix("08") || cleanPhone.hasPrefix("+8862") || cleanPhone.hasPrefix("+8863") ||
-                    cleanPhone.hasPrefix("+8864") || cleanPhone.hasPrefix("+8865") || cleanPhone.hasPrefix("+8866") ||
-                    cleanPhone.hasPrefix("+8867") || cleanPhone.hasPrefix("+8868")) {
+                if (cleanPhoneForCheck.hasPrefix("02") || cleanPhoneForCheck.hasPrefix("03") || cleanPhoneForCheck.hasPrefix("04") || 
+                    cleanPhoneForCheck.hasPrefix("05") || cleanPhoneForCheck.hasPrefix("06") || cleanPhoneForCheck.hasPrefix("07") || 
+                    cleanPhoneForCheck.hasPrefix("08") || cleanPhoneForCheck.hasPrefix("+8862") || cleanPhoneForCheck.hasPrefix("+8863") ||
+                    cleanPhoneForCheck.hasPrefix("+8864") || cleanPhoneForCheck.hasPrefix("+8865") || cleanPhoneForCheck.hasPrefix("+8866") ||
+                    cleanPhoneForCheck.hasPrefix("+8867") || cleanPhoneForCheck.hasPrefix("+8868")) {
                     if landlinePhone == nil {
-                        landlinePhone = phone
+                        landlinePhone = originalPhone  // 保留原始格式
+                        print("📞 設定市內電話: '\(originalPhone)'")
                     }
-                } else if cleanPhone.count >= 8 && cleanPhone.count <= 10 && !cleanPhone.hasPrefix("09") {
+                } else if cleanPhoneForCheck.count >= 8 && cleanPhoneForCheck.count <= 10 && !cleanPhoneForCheck.hasPrefix("09") {
                     // 其他可能的市內電話格式
                     if landlinePhone == nil {
-                        landlinePhone = phone
+                        landlinePhone = originalPhone  // 保留原始格式
+                        print("📞 設定其他市內電話: '\(originalPhone)'")
                     }
                 }
             }
@@ -500,7 +531,7 @@ class OCRProcessor {
     /// - Returns: 公司名稱
     private func extractCompanyName(from ocrResult: OCRResult) -> String? {
         // 通常公司名稱在名片的上方或中間區域
-        let upperRegion = CGRect(x: 0, y: 0.5, width: 1.0, height: 0.5)
+        let upperRegion = CGRect(x: 0, y: 0, width: 1.0, height: 0.5)
         let upperTexts = visionService.extractTextInRegion(ocrResult.boundingBoxes, region: upperRegion)
         
         // 中文公司名稱關鍵字
@@ -549,8 +580,16 @@ class OCRProcessor {
     /// - Parameter ocrResult: OCR 結果
     /// - Returns: 人名
     private func extractPersonName(from ocrResult: OCRResult) -> String? {
-        // 調整人名區域：通常在名片的上方區域，擴大範圍以包含更多候選
-        let upperRegion = CGRect(x: 0, y: 0.5, width: 1.0, height: 0.5)
+        // 調整人名區域：通常在名片的上方區域（y: 0 表示從頂部開始）
+        let upperRegion = CGRect(x: 0, y: 0, width: 1.0, height: 0.5)
+        
+        // 🔬 詳細調試：列印所有邊界框資訊
+        print("🔬 OCRProcessor: 總共有 \(ocrResult.boundingBoxes.count) 個邊界框")
+        for (index, box) in ocrResult.boundingBoxes.enumerated() {
+            print("📦 邊界框[\(index)]: '\(box.text)' at \(box.boundingBox) (confidence: \(box.confidence))")
+        }
+        
+        print("🔍 OCRProcessor: 查找區域: \(upperRegion)")
         let upperTexts = visionService.extractTextInRegion(ocrResult.boundingBoxes, region: upperRegion)
         
         print("🔍 OCRProcessor: 在上方區域找到 \(upperTexts.count) 個文字候選: \(upperTexts)")
@@ -561,9 +600,33 @@ class OCRProcessor {
         // 英文人名特徵：改進模式，支援 "First Last" 格式
         let englishNamePattern = "^[A-Za-z]+\\s+[A-Za-z]+$"
         
-        // 首先尋找英文人名（因為問題是 "Kevin Su"）
+        // 台灣名片優先尋找中文人名
+        var chineseNameCandidate: String? = nil
+        var englishNameCandidate: String? = nil
+        
+        // 排除關鍵字
+        let excludeKeywords = ["公司", "企業", "集團", "有限", "股份", "科技", "實業", "貿易", "Ltd", "Inc", "Corp", "Company", "Technology", "Tech", "@", "www", ".com"]
+        
+        // 收集候選人名
         for text in upperTexts {
             let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // 檢查是否包含排除關鍵字
+            let containsExcludeKeyword = excludeKeywords.contains { keyword in
+                trimmedText.localizedCaseInsensitiveContains(keyword)
+            }
+            
+            // 收集中文人名候選
+            if trimmedText.range(of: chineseNamePattern, options: .regularExpression) != nil && !containsExcludeKeyword {
+                print("🏷️ 發現中文人名候選: \(trimmedText)")
+                if chineseNameCandidate == nil {
+                    chineseNameCandidate = trimmedText
+                }
+            } else if trimmedText.range(of: chineseNamePattern, options: .regularExpression) != nil {
+                print("⛔ 跳過包含排除關鍵字的候選: \(trimmedText)")
+            }
+            
+            // 收集英文人名候選
             if trimmedText.range(of: englishNamePattern, options: .regularExpression) != nil &&
                !trimmedText.contains("@") && 
                !trimmedText.contains("www") && 
@@ -572,23 +635,26 @@ class OCRProcessor {
                !trimmedText.localizedCaseInsensitiveContains("ltd") &&
                !trimmedText.localizedCaseInsensitiveContains("inc") {
                 print("🏷️ 發現英文人名候選: \(trimmedText)")
-                return trimmedText
+                if englishNameCandidate == nil {
+                    englishNameCandidate = trimmedText
+                }
             }
         }
         
-        // 再尋找中文人名
-        for text in upperTexts {
-            let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmedText.range(of: chineseNamePattern, options: .regularExpression) != nil {
-                print("🏷️ 發現中文人名候選: \(trimmedText)")
-                return trimmedText
-            }
+        // 優先返回中文人名
+        if let chineseName = chineseNameCandidate {
+            print("🏆 OCRProcessor 優先選擇中文人名: \(chineseName)")
+            return chineseName
+        }
+        
+        // 備選英文人名
+        if let englishName = englishNameCandidate {
+            print("🏆 OCRProcessor 備選英文人名: \(englishName)")
+            return englishName
         }
         
         // 如果沒有找到符合嚴格模式的，使用寬鬆邏輯
         // 但排除明顯的公司名稱和聯絡資訊
-        let excludeKeywords = ["@", "www", ".com", "公司", "企業", "Ltd", "Inc", "Corp", "Company", "Technology", "Tech"]
-        
         for text in upperTexts {
             let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
             let length = trimmedText.count

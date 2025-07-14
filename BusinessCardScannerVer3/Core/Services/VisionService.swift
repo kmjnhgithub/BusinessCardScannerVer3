@@ -201,10 +201,19 @@ class VisionService {
             let candidates = observation.topCandidates(3).map { $0.string }
             
             // 建立邊界框資訊
+            // 🔧 修正座標系統：Vision 使用左下角為原點，需要轉換為左上角原點
+            let visionBoundingBox = observation.boundingBox
+            let correctedBoundingBox = CGRect(
+                x: visionBoundingBox.origin.x,
+                y: 1.0 - visionBoundingBox.origin.y - visionBoundingBox.size.height,  // 翻轉 Y 座標
+                width: visionBoundingBox.size.width,
+                height: visionBoundingBox.size.height
+            )
+            
             let boundingBox = TextBoundingBox(
                 text: text,
                 confidence: confidence,
-                boundingBox: observation.boundingBox,
+                boundingBox: correctedBoundingBox,
                 topCandidates: candidates
             )
             
@@ -244,12 +253,18 @@ class VisionService {
     ///   - region: 目標區域 (正規化座標 0.0-1.0)
     /// - Returns: 該區域的文字陣列
     func extractTextInRegion(_ boundingBoxes: [TextBoundingBox], region: CGRect) -> [String] {
-        return boundingBoxes.compactMap { box in
+        print("🔬 VisionService: 在區域 \(region) 中查找文字")
+        let results = boundingBoxes.compactMap { box in
             if box.boundingBox.intersects(region) {
+                print("✅ 匹配: '\(box.text)' at \(box.boundingBox)")
                 return box.text
+            } else {
+                print("❌ 不匹配: '\(box.text)' at \(box.boundingBox)")
+                return nil
             }
-            return nil
         }
+        print("🔬 VisionService: 區域查找完成，找到 \(results.count) 個結果")
+        return results
     }
     
     /// 根據信心度過濾文字

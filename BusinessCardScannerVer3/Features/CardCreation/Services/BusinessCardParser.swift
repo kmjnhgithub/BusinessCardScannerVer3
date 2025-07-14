@@ -60,9 +60,13 @@ class BusinessCardParser: BusinessCardParserProtocol {
         result.source = .local
         
         // Use pre-extracted fields from OCRProcessor
-        result.name = selectBestValue(candidates: [
+        print("🔬 BusinessCardParser: OCRProcessor 提取的人名: '\(ocrResult.extractedFields["name"] ?? "nil")'")
+        let textBasedName = extractName(from: ocrResult.preprocessedText)
+        print("🔬 BusinessCardParser: 文字提取的人名: '\(textBasedName ?? "nil")'")
+        
+        result.name = selectBestNameValue(candidates: [
             ocrResult.extractedFields["name"],
-            extractName(from: ocrResult.preprocessedText)
+            textBasedName
         ])
         
         result.email = selectBestValue(candidates: [
@@ -150,6 +154,7 @@ private extension BusinessCardParser {
             .filter { !$0.isEmpty }
         
         print("🔍 BusinessCardParser: 分析 \(lines.count) 行文字尋找人名")
+        print("🔬 BusinessCardParser: 輸入文字: '\(text.prefix(200))...'")  // 只顯示前200字符
         
         // Chinese name pattern (2-4 characters)
         let chineseNamePattern = "^[\\u{4e00}-\\u{9fff}]{2,4}$"
@@ -166,6 +171,10 @@ private extension BusinessCardParser {
         ]
         
         // 優先檢查前5行（通常名字在較前面的位置）
+        // 調整策略：台灣名片中文名優先
+        var chineseNameCandidate: String? = nil
+        var englishNameCandidate: String? = nil
+        
         for line in lines.prefix(5) {
             print("📝 檢查行: '\(line)'")
             
@@ -179,17 +188,45 @@ private extension BusinessCardParser {
                 continue
             }
             
-            // 首先檢查英文人名模式（針對 "Kevin Su" 問題）
-            if matches(line, pattern: englishNamePattern) {
-                print("✅ 找到英文人名: '\(line)'")
-                return line
+            // 收集中文人名候選
+            if matches(line, pattern: chineseNamePattern) {
+                print("✅ 找到中文人名候選: '\(line)'")
+                if chineseNameCandidate == nil {
+                    chineseNameCandidate = line
+                }
+            } else if line.range(of: "^[\\u{4e00}-\\u{9fff}]{2,4}$", options: .regularExpression) != nil {
+                // 偵錯：為什麼 matches 失敗
+                print("⚠️ 中文名模式偵錯 - 使用 range(of:) 成功匹配: '\(line)'")
+                if chineseNameCandidate == nil {
+                    chineseNameCandidate = line
+                }
+            } else {
+                // 檢查是否是中文但不符合模式
+                let containsChinese = line.range(of: "[\\u{4e00}-\\u{9fff}]", options: .regularExpression) != nil
+                if containsChinese && line.count >= 2 && line.count <= 4 {
+                    print("❓ 包含中文但不符合嚴格模式: '\(line)' (長度: \(line.count))")
+                }
             }
             
-            // 再檢查中文人名模式
-            if matches(line, pattern: chineseNamePattern) {
-                print("✅ 找到中文人名: '\(line)'")
-                return line
+            // 收集英文人名候選
+            if matches(line, pattern: englishNamePattern) {
+                print("✅ 找到英文人名候選: '\(line)'")
+                if englishNameCandidate == nil {
+                    englishNameCandidate = line
+                }
             }
+        }
+        
+        // 台灣名片優先返回中文名
+        if let chineseName = chineseNameCandidate {
+            print("🏆 優先選擇中文人名: '\(chineseName)'")
+            return chineseName
+        }
+        
+        // 如果沒有中文名，才使用英文名
+        if let englishName = englishNameCandidate {
+            print("🏆 備選英文人名: '\(englishName)'")
+            return englishName
         }
         
         // 如果沒有找到符合嚴格模式的，使用寬鬆模式
@@ -453,13 +490,16 @@ private extension BusinessCardParser {
     }
     
     func extractJobTitle(from text: String) -> String? {
+        // 先進行OCR錯誤修正
+        let correctedText = fixJobTitleOCRErrors(text)
+        
         let jobTitleKeywords = [
             // Executive levels
-            "總經理", "執行長", "董事長", "總裁", "副總", "協理", "經理", "副理",
+            "總經理", "執行長", "董事長", "總裁", "副總", "協理", "經理", "副理", "總裁特助", "執行長特助",
             "CEO", "CTO", "CFO", "COO", "President", "Director", "Manager", "VP",
             
             // Professional titles
-            "工程師", "設計師", "分析師", "顧問", "專員", "主任", "組長", "課長",
+            "工程師", "設計師", "分析師", "顧問", "專員", "主任", "組長", "課長", "特助",
             "Engineer", "Designer", "Analyst", "Consultant", "Specialist", "Lead",
             
             // Sales and Marketing
@@ -467,19 +507,48 @@ private extension BusinessCardParser {
             "Sales", "Marketing", "Account", "Business", "Service"
         ]
         
-        let lines = text.components(separatedBy: .newlines)
+        let lines = correctedText.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         
         for line in lines {
             for keyword in jobTitleKeywords {
                 if line.contains(keyword) {
+                    print("💼 找到職位關鍵字 '\(keyword)' 在行: '\(line)'")
                     return line
                 }
             }
         }
         
         return nil
+    }
+    
+    /// 修正職位相關的OCR錯誤
+    /// - Parameter text: 原始文字
+    /// - Returns: 修正後的文字
+    private func fixJobTitleOCRErrors(_ text: String) -> String {
+        var correctedText = text
+        
+        // 常見的職位OCR錯誤修正
+        let titleCorrections: [String: String] = [
+            "總栽": "總裁",          // 栽 經常被誤識為 裁
+            "總哉": "總裁",          // 哉 經常被誤識為 裁
+            "經埋": "經理",          // 埋 經常被誤識為 理
+            "協埋": "協理",          // 埋 經常被誤識為 理
+            "副埋": "副理",          // 埋 經常被誤識為 理
+            "特肋": "特助",          // 肋 經常被誤識為 助
+            "特勘": "特助",          // 勘 經常被誤識為 助
+            "執衍長": "執行長",       // 衍 經常被誤識為 行
+        ]
+        
+        for (wrong, correct) in titleCorrections {
+            if correctedText.contains(wrong) {
+                print("🔧 修正職位OCR錯誤: \(wrong) → \(correct)")
+                correctedText = correctedText.replacingOccurrences(of: wrong, with: correct)
+            }
+        }
+        
+        return correctedText
     }
     
     func extractAddress(from text: String) -> String? {
@@ -687,6 +756,32 @@ private extension BusinessCardParser {
             .max(by: { $0.count < $1.count })
     }
     
+    func selectBestNameValue(candidates: [String?]) -> String? {
+        // 針對人名的特殊選擇邏輯：優先選擇中文名
+        let validCandidates = candidates
+            .compactMap { $0 }
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        
+        print("🏷️ selectBestNameValue: 候選人名 \(validCandidates)")
+        
+        // 中文人名模式
+        let chineseNamePattern = "^[\\u{4e00}-\\u{9fff}]{2,4}$"
+        
+        // 優先尋找中文人名
+        for candidate in validCandidates {
+            let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            if matches(trimmed, pattern: chineseNamePattern) {
+                print("🏆 優先選擇中文人名: '\(trimmed)'")
+                return trimmed
+            }
+        }
+        
+        // 如果沒有中文名，回到原始邏輯（選最長的）
+        let result = validCandidates.max(by: { $0.count < $1.count })
+        print("🏷️ 沒有中文名，選擇: '\(result ?? "nil")'")
+        return result
+    }
+    
     func matches(_ text: String, pattern: String) -> Bool {
         do {
             let regex = try NSRegularExpression(pattern: pattern)
@@ -801,7 +896,14 @@ private extension BusinessCardParser {
     }
     
     private func formatPhoneNumber(_ phone: String) -> String {
-        // 移除所有非數字字符（保留+號）（參考 Ver2）
+        // 如果原始號碼已經格式良好（包含適當的分隔符），保留原格式
+        let hasGoodFormat = phone.contains("-") || phone.contains(" ")
+        if hasGoodFormat && (phone.hasPrefix("+886") || phone.hasPrefix("886") || phone.hasPrefix("0")) {
+            print("📞 保留原始格式良好的電話號碼: '\(phone)'")
+            return phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        // 移除所有非數字字符（保留+號）
         let cleaned = phone.replacingOccurrences(of: "[^0-9+]", with: "", options: .regularExpression)
         
         // 根據長度判斷格式
@@ -912,16 +1014,16 @@ private extension BusinessCardParser {
         var score = 0.0
         var maxScore = 0.0
         
-        // Weight different fields (包含分離的電話和手機)
+        // Weight different fields (針對台灣名片優化權重)
         let fieldWeights: [(value: String?, weight: Double)] = [
-            (data.name, 0.25),
-            (data.company, 0.20),
-            (data.email, 0.15),
-            (data.phone, 0.10),      // 市內電話
-            (data.mobile, 0.10),     // 手機
-            (data.jobTitle, 0.08),
-            (data.address, 0.07),
-            (data.website, 0.05)
+            (data.name, 0.30),       // 提高人名權重（最重要）
+            (data.company, 0.25),    // 提高公司名權重
+            (data.jobTitle, 0.15),   // 提高職位權重（台灣名片常有職位）
+            (data.email, 0.12),      // 電子郵件
+            (data.phone, 0.08),      // 市內電話
+            (data.mobile, 0.08),     // 手機
+            (data.address, 0.02),    // 降低地址權重（常常不完整）
+            (data.website, 0.00)     // 網站較少出現在台灣名片
         ]
         
         for (value, weight) in fieldWeights {

@@ -68,7 +68,7 @@ class BusinessCardService: BusinessCardServiceProtocol {
                     let ocrProcessor = OCRProcessor(visionService: self.visionService)
                     
                     // 使用裁切後的圖片進行 OCR 處理
-                    ocrProcessor.processImage(businessCardResult.croppedImage) { ocrResult in
+                    ocrProcessor.processImage(businessCardResult.croppedImage) { [ocrProcessor] ocrResult in
                         switch ocrResult {
                         case .success(let ocrProcessingResult):
                             print("✅ OCR 處理完成，提取欄位: \(ocrProcessingResult.extractedFields.keys.joined(separator: ", "))")
@@ -94,7 +94,7 @@ class BusinessCardService: BusinessCardServiceProtocol {
                     print("❌ 名片偵測失敗，嘗試使用原圖進行 OCR")
                     // 如果名片偵測失敗，回到原本的流程使用原圖
                     let ocrProcessor = OCRProcessor(visionService: self.visionService)
-                    ocrProcessor.processImage(image) { ocrResult in
+                    ocrProcessor.processImage(image) { [ocrProcessor] ocrResult in
                         switch ocrResult {
                         case .success(let ocrProcessingResult):
                             // 檢查 AI 是否可用且已啟用

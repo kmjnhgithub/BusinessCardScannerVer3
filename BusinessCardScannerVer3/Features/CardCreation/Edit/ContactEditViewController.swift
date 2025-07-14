@@ -431,9 +431,12 @@ class ContactEditViewController: BaseViewController {
     private func updateUI(with cardData: ParsedCardData) {
         print("🔄 ContactEditViewController: 更新UI with cardData:")
         print("   Name: \(cardData.name ?? "nil")")
+        print("   JobTitle: \(cardData.jobTitle ?? "nil")")
         print("   Company: \(cardData.company ?? "nil")")
         print("   Email: \(cardData.email ?? "nil")")
         print("   Phone: \(cardData.phone ?? "nil")")
+        print("   Mobile: \(cardData.mobile ?? "nil")")
+
         
         // 直接設定欄位值，並強制 UI 更新
         DispatchQueue.main.async { [weak self] in
@@ -443,7 +446,9 @@ class ContactEditViewController: BaseViewController {
             self.jobTitleField.text = cardData.jobTitle
             self.companyField.text = cardData.company
             self.emailField.text = cardData.email
+            // 保留電話號碼的原始格式
             self.phoneField.text = cardData.phone
+            print("📞 設置電話欄位: '\(cardData.phone ?? "nil")'")
             self.mobileField.text = cardData.mobile
             self.addressField.text = cardData.address
             self.websiteField.text = cardData.website
