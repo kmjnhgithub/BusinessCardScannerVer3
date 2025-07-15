@@ -4,8 +4,8 @@
 
 ## 專案概述
 
-這是一個 Portfolio 展示專案，透過實現真實商業解決方案來展示 iOS 開發專業能力：將名片數位化並使用 AI 增強準確度進行管理。
-
+透過實現真實商業解決方案來展示 iOS 開發專業能力：將名片數位化並使用 AI 增強準確度進行管理。
+https://www.notion.so/SNCF-231e1887280f810e87e6d0bbdfa53dba?source=copy_link#231e1887280f8042bd4cd1ada7386319
 ### 專案數據
 - **架構模式**: MVVM + Coordinator + Combine
 - **UI 實作**: 100% 程式化 UI（無 Storyboard）
