@@ -33,10 +33,10 @@ struct CardDetectionResult {
     let confidence: Float
 }
 
-/// 完整的名片處理結果
-struct BusinessCardProcessResult {
+/// 名片偵測和裁切結果
+struct BusinessCardDetectionResult {
     let croppedImage: UIImage
-    let ocrResult: OCRResult
+    let detectionConfidence: Float
 }
 
 /// Vision 服務錯誤類型
@@ -452,8 +452,8 @@ class VisionService {
     }
     
     /// 完整的名片處理流程：偵測 → 裁切 → OCR
-    func processBusinessCard(image: UIImage, completion: @escaping (Result<BusinessCardProcessResult, VisionError>) -> Void) {
-        print("🎯 VisionService: 開始完整名片處理流程")
+    func processBusinessCard(image: UIImage, completion: @escaping (Result<BusinessCardDetectionResult, VisionError>) -> Void) {
+        print("🎯 VisionService: 開始名片偵測和裁切流程")
         
         // Step 1: 偵測名片
         detectRectangle(in: image) { [weak self] rectangleResult in
@@ -461,7 +461,7 @@ class VisionService {
             
             switch rectangleResult {
             case .success(let observation):
-                print("✅ VisionService: Step 1 完成 - 名片偵測成功")
+                print("✅ VisionService: Step 1 完成 - 名片偵測成功，信心度: \(observation.confidence)")
                 
                 // Step 2: 裁切名片
                 self.cropCard(from: image, observation: observation) { cropResult in
@@ -469,38 +469,26 @@ class VisionService {
                     case .success(let croppedImage):
                         print("✅ VisionService: Step 2 完成 - 名片裁切成功，尺寸: \(croppedImage.size)")
                         
-                        // Step 3: OCR 識別
-                        self.recognizeText(from: croppedImage) { ocrResult in
-                            switch ocrResult {
-                            case .success(let ocr):
-                                print("✅ VisionService: Step 3 完成 - OCR 識別成功")
-                                let result = BusinessCardProcessResult(croppedImage: croppedImage, ocrResult: ocr)
-                                completion(.success(result))
-                            case .failure(let error):
-                                print("❌ VisionService: Step 3 失敗 - OCR 識別失敗: \(error.localizedDescription)")
-                                completion(.failure(error))
-                            }
-                        }
+                        // 直接返回裁切結果，不進行 OCR
+                        let result = BusinessCardDetectionResult(
+                            croppedImage: croppedImage,
+                            detectionConfidence: observation.confidence
+                        )
+                        completion(.success(result))
+                        
                     case .failure(let error):
                         print("❌ VisionService: Step 2 失敗 - 名片裁切失敗: \(error.localizedDescription)")
                         completion(.failure(error))
                     }
                 }
-            case .failure(let error):
-                // 如果偵測失敗，直接對原圖進行 OCR
-                print("⚠️ VisionService: Step 1 失敗 - 矩形偵測失敗，改用原圖 OCR")
-                self.recognizeText(from: image) { ocrResult in
-                    switch ocrResult {
-                    case .success(let ocr):
-                        print("✅ VisionService: 原圖 OCR 成功 - 使用原圖作為結果")
-                        // 返回原圖和 OCR 結果
-                        let result = BusinessCardProcessResult(croppedImage: image, ocrResult: ocr)
-                        completion(.success(result))
-                    case .failure:
-                        print("❌ VisionService: 原圖 OCR 也失敗")
-                        completion(.failure(error))
-                    }
-                }
+            case .failure(_):
+                // 如果偵測失敗，使用原圖作為回退方案
+                print("⚠️ VisionService: Step 1 失敗 - 矩形偵測失敗，使用原圖作為回退")
+                let result = BusinessCardDetectionResult(
+                    croppedImage: image,
+                    detectionConfidence: 0.0  // 表示未偵測到矩形
+                )
+                completion(.success(result))
             }
         }
     }

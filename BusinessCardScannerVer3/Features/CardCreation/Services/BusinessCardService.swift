@@ -58,17 +58,17 @@ class BusinessCardService: BusinessCardServiceProtocol {
                 return
             }
             
-            // 使用新的 VisionService 方法進行名片偵測、裁切和 OCR
+            // 使用 VisionService 進行名片偵測和裁切
             self.visionService.processBusinessCard(image: image) { result in
                 switch result {
-                case .success(let businessCardResult):
-                    print("✅ 名片處理完成，使用裁切後的圖片進行解析")
+                case .success(let detectionResult):
+                    print("✅ 名片偵測和裁切完成，信心度: \(detectionResult.detectionConfidence)")
                     
                     // 使用 OCRProcessor 進行完整的欄位提取處理（用裁切後的圖片）
                     let ocrProcessor = OCRProcessor(visionService: self.visionService)
                     
                     // 使用裁切後的圖片進行 OCR 處理
-                    ocrProcessor.processImage(businessCardResult.croppedImage) { [ocrProcessor] ocrResult in
+                    ocrProcessor.processImage(detectionResult.croppedImage) { ocrResult in
                         switch ocrResult {
                         case .success(let ocrProcessingResult):
                             print("✅ OCR 處理完成，提取欄位: \(ocrProcessingResult.extractedFields.keys.joined(separator: ", "))")
@@ -80,7 +80,7 @@ class BusinessCardService: BusinessCardServiceProtocol {
                             // 檢查 AI 是否可用且已啟用
                             self.processWithAIOrFallback(
                                 ocrResult: ocrProcessingResult,
-                                croppedImage: businessCardResult.croppedImage,
+                                croppedImage: detectionResult.croppedImage,
                                 promise: promise
                             )
                             
@@ -90,23 +90,9 @@ class BusinessCardService: BusinessCardServiceProtocol {
                         }
                     }
                     
-                case .failure(_):
-                    print("❌ 名片偵測失敗，嘗試使用原圖進行 OCR")
-                    // 如果名片偵測失敗，回到原本的流程使用原圖
-                    let ocrProcessor = OCRProcessor(visionService: self.visionService)
-                    ocrProcessor.processImage(image) { [ocrProcessor] ocrResult in
-                        switch ocrResult {
-                        case .success(let ocrProcessingResult):
-                            // 檢查 AI 是否可用且已啟用
-                            self.processWithAIOrFallback(
-                                ocrResult: ocrProcessingResult,
-                                croppedImage: image,
-                                promise: promise
-                            )
-                        case .failure(let ocrError):
-                            promise(.success(BusinessCardProcessingResult.processingFailed(ocrError)))
-                        }
-                    }
+                case .failure(let error):
+                    print("❌ 名片偵測失敗: \(error.localizedDescription)")
+                    promise(.success(BusinessCardProcessingResult.processingFailed(error)))
                 }
             }
         }
