@@ -400,7 +400,7 @@ extension FormFieldView {
         let field = FormFieldView()
         field.title = "OpenAI API Key"
         field.placeholder = "請輸入您的 OpenAI API Key (sk-...)"
-//        field.icon = UIImage(systemName: "key.fill")
+        field.icon = UIImage(systemName: "key.fill")
         field.isRequired = required
         field.isSecureTextEntry = true
         field.autocapitalizationType = .none
