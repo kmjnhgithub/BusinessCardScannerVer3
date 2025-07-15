@@ -41,12 +41,6 @@ class AICardParser {
             .tryMap { [weak self] response in
                 return try self?.parseAIResponse(response) ?? ParsedCardData()
             }
-            .catch { error in
-                // 錯誤處理：回傳包含錯誤資訊的結果
-                Just(ParsedCardData(source: .manual))
-                    .setFailureType(to: Error.self)
-                    .eraseToAnyPublisher()
-            }
             .eraseToAnyPublisher()
     }
     
