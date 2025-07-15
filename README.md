@@ -7,6 +7,10 @@
 透過實現真實商業解決方案來展示 iOS 開發專業能力：將名片數位化並使用 AI 增強準確度進行管理。
 
 ![CreateCardsDemo](https://github.com/user-attachments/assets/aaf04308-3583-4834-91c7-b1f0047c7f68)
+<img width="1179" height="2556" alt="Simulator Screenshot - iPhone 16 - 2025-07-15 at 13 53 02" src="https://github.com/user-attachments/assets/b973ffae-78a2-40f1-9ee6-e34421bdc51f" />
+<img width="1179" height="2556" alt="Simulator Screenshot - iPhone 16 - 2025-07-15 at 13 53 08" src="https://github.com/user-attachments/assets/02b19400-8758-4d72-afb3-a1026d33b110" />
+<img width="1179" height="2556" alt="Simulator Screenshot - iPhone 16 - 2025-07-15 at 13 53 15" src="https://github.com/user-attachments/assets/8f882c79-e61c-4e15-b7d6-7bdafa7a2094" />
+
 
 ### 專案數據
 - **架構模式**: MVVM + Coordinator + Combine
