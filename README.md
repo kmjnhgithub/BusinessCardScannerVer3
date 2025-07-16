@@ -152,7 +152,7 @@ protocol CardListModulable {
 ### 自訂元件
 - **主題化 UI 系統**: AppTheme 集中樣式管理
 - **可重用元件**: 表單欄位、卡片、按鈕
-- **響應式佈局**: 適應所有 iPhone 尺寸
+- **自適應式佈局Adaptive User Interfaces**: 適應所有 iPhone 尺寸
 
 ## 程式碼的目前與未來
 
