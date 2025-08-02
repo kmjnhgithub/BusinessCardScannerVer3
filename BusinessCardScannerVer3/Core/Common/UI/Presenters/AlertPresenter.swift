@@ -615,14 +615,6 @@ extension AlertPresenter {
         )
     }
     
-    /// 顯示開發中提示
-    func showComingSoon() {
-        showMessage(
-            "此功能正在開發中，敬請期待",
-            title: "即將推出"
-        )
-    }
-    
     /// 顯示 API Key 設定提示
     func showAPIKeyRequired() {
         showConfirmation(
