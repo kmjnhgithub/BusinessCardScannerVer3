@@ -1,0 +1,340 @@
+import Foundation
+import Combine
+@testable import BusinessCardScannerVer3
+
+/// Mock 名片資料存取層，用於測試
+final class MockBusinessCardRepository: BusinessCardRepositoryProtocol {
+    
+    // MARK: - Mock Data Storage
+    
+    private var mockCards: [BusinessCard] = []
+    private var nextID: Int = 1
+    
+    // MARK: - Mock Configuration
+    
+    /// 是否模擬成功操作
+    var shouldSucceed: Bool = true
+    
+    /// 模擬錯誤
+    var mockError: Error = MockError.serviceUnavailable
+    
+    /// 操作延遲（秒）
+    var operationDelay: TimeInterval = 0.1
+    
+    /// 是否模擬網路延遲
+    var simulateNetworkDelay: Bool = false
+    
+    // MARK: - Test Results Configuration
+    
+    /// 自訂 fetchAllCards 回應
+    var fetchAllCardsResult: Result<[BusinessCard], Error>?
+    
+    /// 自訂 createCard 回應
+    var createCardResult: Result<BusinessCard, Error>?
+    
+    /// 自訂 updateCard 回應  
+    var updateCardResult: Result<BusinessCard, Error>?
+    
+    /// 自訂 deleteCard 回應
+    var deleteCardResult: Result<Void, Error>?
+    
+    // MARK: - Analytics
+    
+    /// 呼叫次數記錄
+    private(set) var fetchAllCallCount: Int = 0
+    private(set) var createCallCount: Int = 0
+    private(set) var updateCallCount: Int = 0
+    private(set) var deleteCallCount: Int = 0
+    
+    /// 最後呼叫的參數
+    private(set) var lastCreatedCard: BusinessCard?
+    private(set) var lastUpdatedCard: BusinessCard?
+    private(set) var lastDeletedCard: BusinessCard?
+    
+    // MARK: - Initialization
+    
+    init() {
+        setupDefaultMockData()
+    }
+    
+    private func setupDefaultMockData() {
+        mockCards = [
+            BusinessCard(
+                id: UUID(),
+                name: "王大明",
+                jobTitle: "產品經理",
+                company: "ABC 科技公司",
+                email: "wang@abc.com",
+                phone: "02-1234-5678",
+                mobile: "0912-345-678",
+                address: "台北市信義區信義路五段7號",
+                website: "www.abc.com",
+                photoPath: "mock_photo_1.jpg",
+                createdAt: Date().addingTimeInterval(-86400), // 1天前
+                updatedAt: Date(),
+                parseSource: "local",
+                parseConfidence: 0.85
+            ),
+            BusinessCard(
+                id: UUID(),
+                name: "李小華",
+                jobTitle: "創意總監",
+                company: "XYZ 設計工作室",
+                email: "lee@xyz.com",
+                phone: "02-8765-4321",
+                mobile: "0987-654-321",
+                website: "www.xyz-design.com",
+                createdAt: Date().addingTimeInterval(-172800), // 2天前
+                updatedAt: Date(),
+                parseSource: "ai",
+                parseConfidence: 0.92
+            )
+        ]
+    }
+    
+    // MARK: - BusinessCardRepositoryProtocol Implementation
+    
+    func fetchAllCards() -> AnyPublisher<[BusinessCard], Error> {
+        fetchAllCallCount += 1
+        
+        // 使用自訂結果（如果有設定）
+        if let customResult = fetchAllCardsResult {
+            return createPublisher(with: customResult)
+        }
+        
+        // 一般 Mock 行為
+        if shouldSucceed {
+            return createPublisher(with: .success(mockCards))
+        } else {
+            return createPublisher(with: .failure(mockError))
+        }
+    }
+    
+    func fetchCard(byID id: UUID) -> AnyPublisher<BusinessCard?, Error> {
+        if shouldSucceed {
+            let card = mockCards.first { $0.id == id }
+            return createPublisher(with: .success(card))
+        } else {
+            return createPublisher(with: .failure(mockError))
+        }
+    }
+    
+    func createCard(_ card: BusinessCard) -> AnyPublisher<BusinessCard, Error> {
+        createCallCount += 1
+        lastCreatedCard = card
+        
+        // 使用自訂結果（如果有設定）
+        if let customResult = createCardResult {
+            return createPublisher(with: customResult)
+        }
+        
+        if shouldSucceed {
+            // 模擬新增到儲存
+            let newCard = BusinessCard(
+                id: card.id ?? UUID(),
+                name: card.name,
+                namePhonetic: card.namePhonetic,
+                jobTitle: card.jobTitle,
+                company: card.company,
+                companyPhonetic: card.companyPhonetic,
+                department: card.department,
+                email: card.email,
+                phone: card.phone,
+                mobile: card.mobile,
+                fax: card.fax,
+                address: card.address,
+                website: card.website,
+                memo: card.memo,
+                photoPath: card.photoPath,
+                createdAt: card.createdAt ?? Date(),
+                updatedAt: Date(),
+                parseSource: card.parseSource,
+                parseConfidence: card.parseConfidence,
+                rawOCRText: card.rawOCRText
+            )
+            
+            mockCards.append(newCard)
+            return createPublisher(with: .success(newCard))
+        } else {
+            return createPublisher(with: .failure(mockError))
+        }
+    }
+    
+    func updateCard(_ card: BusinessCard) -> AnyPublisher<BusinessCard, Error> {
+        updateCallCount += 1
+        lastUpdatedCard = card
+        
+        // 使用自訂結果（如果有設定）
+        if let customResult = updateCardResult {
+            return createPublisher(with: customResult)
+        }
+        
+        if shouldSucceed {
+            // 更新現有名片
+            if let index = mockCards.firstIndex(where: { $0.id == card.id }) {
+                let updatedCard = BusinessCard(
+                    id: card.id,
+                    name: card.name,
+                    namePhonetic: card.namePhonetic,
+                    jobTitle: card.jobTitle,
+                    company: card.company,
+                    companyPhonetic: card.companyPhonetic,
+                    department: card.department,
+                    email: card.email,
+                    phone: card.phone,
+                    mobile: card.mobile,
+                    fax: card.fax,
+                    address: card.address,
+                    website: card.website,
+                    memo: card.memo,
+                    photoPath: card.photoPath,
+                    createdAt: card.createdAt,
+                    updatedAt: Date(),
+                    parseSource: card.parseSource,
+                    parseConfidence: card.parseConfidence,
+                    rawOCRText: card.rawOCRText
+                )
+                
+                mockCards[index] = updatedCard
+                return createPublisher(with: .success(updatedCard))
+            } else {
+                return createPublisher(with: .failure(MockError.dataCorrupted))
+            }
+        } else {
+            return createPublisher(with: .failure(mockError))
+        }
+    }
+    
+    func deleteCard(_ card: BusinessCard) -> AnyPublisher<Void, Error> {
+        // card.id is not optional, so no need for guard let
+        let id = card.id
+        return deleteCard(byID: id)  
+    }
+    
+    func deleteCard(byID id: UUID) -> AnyPublisher<Void, Error> {
+        deleteCallCount += 1
+        
+        // 使用自訂結果（如果有設定）
+        if let customResult = deleteCardResult {
+            return createPublisher(with: customResult)
+        }
+        
+        if shouldSucceed {
+            if let index = mockCards.firstIndex(where: { $0.id == id }) {
+                lastDeletedCard = mockCards[index]
+                mockCards.remove(at: index)
+                return createPublisher(with: .success(()))
+            } else {
+                return createPublisher(with: .failure(MockError.dataCorrupted))
+            }
+        } else {
+            return createPublisher(with: .failure(mockError))
+        }
+    }
+    
+    // MARK: - Test Helpers
+    
+    /// 重置 Mock 狀態
+    func reset() {
+        mockCards.removeAll()
+        setupDefaultMockData()
+        
+        shouldSucceed = true
+        mockError = MockError.serviceUnavailable
+        operationDelay = 0.1
+        simulateNetworkDelay = false
+        
+        // 清除自訂結果
+        fetchAllCardsResult = nil
+        createCardResult = nil
+        updateCardResult = nil
+        deleteCardResult = nil
+        
+        // 重置分析數據
+        fetchAllCallCount = 0
+        createCallCount = 0
+        updateCallCount = 0
+        deleteCallCount = 0
+        
+        lastCreatedCard = nil
+        lastUpdatedCard = nil
+        lastDeletedCard = nil
+    }
+    
+    /// 設定空的資料集
+    func setEmptyDataSet() {
+        mockCards.removeAll()
+    }
+    
+    /// 新增 Mock 名片
+    func addMockCard(_ card: BusinessCard) {
+        mockCards.append(card)
+    }
+    
+    /// 設定大量資料集（用於效能測試）
+    func setLargeDataSet(count: Int) {
+        mockCards.removeAll()
+        
+        for i in 1...count {
+            let card = BusinessCard(
+                id: UUID(),
+                name: "測試使用者 \(i)",
+                jobTitle: "測試職位 \(i)",
+                company: "測試公司 \(i)",
+                email: "test\(i)@example.com",
+                phone: "02-1234-\(String(format: "%04d", i))",
+                mobile: "0912-\(String(format: "%03d", i))-\(String(format: "%03d", i))",
+                createdAt: Date().addingTimeInterval(-Double(i * 3600)),
+                updatedAt: Date(),
+                parseSource: i % 2 == 0 ? "ai" : "local",
+                parseConfidence: Double.random(in: 0.7...0.95)
+            )
+            mockCards.append(card)
+        }
+    }
+    
+    // MARK: - Private Helpers
+    
+    private func createPublisher<T>(with result: Result<T, Error>) -> AnyPublisher<T, Error> {
+        let delay = simulateNetworkDelay ? operationDelay : 0.0
+        
+        return Future<T, Error> { promise in
+            DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+                promise(result)
+            }
+        }
+        .eraseToAnyPublisher()
+    }
+}
+
+// MARK: - Test Verification Helpers
+
+extension MockBusinessCardRepository {
+    
+    /// 驗證是否呼叫了 fetchAllCards
+    func verifyFetchAllCalled(times expectedTimes: Int = 1) -> Bool {
+        return fetchAllCallCount == expectedTimes
+    }
+    
+    /// 驗證是否呼叫了 createCard 並傳入指定名片
+    func verifyCreateCalled(with expectedCard: BusinessCard) -> Bool {
+        guard let lastCard = lastCreatedCard else { return false }
+        return lastCard.name == expectedCard.name && 
+               lastCard.company == expectedCard.company
+    }
+    
+    /// 驗證是否呼叫了 updateCard
+    func verifyUpdateCalled(times expectedTimes: Int = 1) -> Bool {
+        return updateCallCount == expectedTimes
+    }
+    
+    /// 驗證是否呼叫了 deleteCard
+    func verifyDeleteCalled(times expectedTimes: Int = 1) -> Bool {
+        return deleteCallCount == expectedTimes
+    }
+    
+    /// 取得目前 Mock 資料的數量
+    var currentMockDataCount: Int {
+        return mockCards.count
+    }
+}

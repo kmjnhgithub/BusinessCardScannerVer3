@@ -1,108 +1,147 @@
-# Xcode
 # ==============================================================================
-# Xcode build products
+# iOS/Xcode Development
+# ==============================================================================
+
+# Build Products
 build/
-*.xcarchive/
-*.xcworkspace/
-*.xcodeproj/xcuserdata/
-*.xcodeproj/project.xcworkspace/
-*.xcodeproj/*.xcuserstate
-*.xcodeproj/project.xcworkspace/xcuserdata/
-
-# Swift Package Manager (SPM)
-.swiftpm/
-Package.resolved
-
-# Cocoapods
-Pods/
-*.xcworkspace
-!Pods/Manifest.lock # Keep this if you want to track Podfile.lock and Pods/Manifest.lock
-
-# Carthage
-Carthage/Build/
-Carthage/Checkouts/
-
-# Derived Data
-# ==============================================================================
+../build/
 DerivedData/
+*.xcarchive/
 
-# Simulator and Device Logs
-# ==============================================================================
-# These can contain sensitive information or be very large
-~/Library/Developer/CoreSimulator/Devices/*/data/Containers/Data/Application/*/tmp/*
-~/Library/Developer/CoreSimulator/Devices/*/data/Containers/Data/Application/*/Documents/*
-~/Library/Logs/CoreSimulator/
-
-# Local configuration files (Security Risk)
-# ==============================================================================
-# Files that might contain API keys, sensitive credentials, or other local settings.
-# ALWAYS ensure these are NOT committed to version control.
-*.pif
-*.keychain
-*.mobileprovision
-*.pem
-.env
-.DS_Store # macOS specific hidden file, generally safe to ignore
-
-# User-specific files
-# ==============================================================================
-# These files often contain user-specific settings or caches that should not be shared
-# across different development environments.
-# They might also contain information that, while not directly sensitive,
-# could reveal details about your local setup.
+# Xcode User Data
 *.xcuserstate
 *.xcuserdatad/
 xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/project.xcworkspace/xcuserdata/
 
-# Miscellaneous
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# Dependency Managers
+Pods/
+*.xcworkspace  # CocoaPods workspace
+!Pods/Manifest.lock
+Carthage/Build/
+Carthage/Checkouts/
+
+# Testing & Coverage
+*.xcresult
+scripts/*.xcresult
+scripts/coverage_report.json
+
 # ==============================================================================
-# General files that are not part of the project source code
-.vscode/ # If you use VS Code for any reason
-.idea/ # If you use AppCode or other JetBrains IDEs
-*.lock # General lock files
-*.backup # Backup files
-*.log # Log files (can be large or contain sensitive info)
+# System & Development Tools
+# ==============================================================================
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo.
-# Instead, use fastlane to re-generate the screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/#source-control
+# macOS
+.DS_Store
 
+# IDEs
+.vscode/
+.idea/
+iOSInjectionProject/
+
+# Fastlane
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 
-# Code Injection
-#
-# After new code Injection tools there's a generated folder /iOSInjectionProject
-# https://github.com/johnno1962/injectionforxcode
+# Simulator Logs
+~/Library/Developer/CoreSimulator/Devices/*/data/Containers/Data/Application/*/tmp/*
+~/Library/Developer/CoreSimulator/Devices/*/data/Containers/Data/Application/*/Documents/*
+~/Library/Logs/CoreSimulator/
 
-iOSInjectionProject/
+# ==============================================================================
+# Security & Sensitive Data
+# ==============================================================================
 
-# Mac OS
-.DS_Store
-
-# 專案特定忽略項目
-# API Keys 和敏感資料
+# API Keys & Credentials
+*.pif
+*.keychain
+*.mobileprovision
+*.pem
+.env
 *.plist.secret
 APIKeys.swift
 
-# 使用者生成的內容
-UserData/
+# ==============================================================================
+# Project-Specific
+# ==============================================================================
 
-# 暫存檔案
+# Test Infrastructure
+BusinessCardScannerVer3Tests/TestDoc/
+!scripts/  # Keep automation scripts
+
+# Build Artifacts
+*.db
+*.SwiftFileList
+*_const_extract_protocols*
+empty-*
+XCTestCore/
+XCTestSupport/
+XCUIAutomation/
+XCUnit/
+libXCTestBundleInject*
+libXCTestSwiftSupport*
+
+# Temporary & Generated Files
 *.tmp
 *.temp
+*.backup
+*.log
+*.lock
+*.local
+*.local.json
+edit_file*
+run_tests_phase*
+UserData/
 
-# Claude Code 設定檔案 (包含個人設定和指令)
-.claude/
-.claude/**
-
+# Documentation (Project-specific)
 CLAUDE.md
-測試指南.md
-測試指南_v2.2.md
 Requirements/
 修復歷史.md
+測試指南*.md
+*整合開發文檔*
+*架構文檔*
+*完整架構*
+*測試任務*
+*設計規範*
+*共用元件*
+*使用指南*
+*ScannerPRD*
+
+# Claude Code Configuration
+.claude/
+
+# Build System Hash Files (Auto-generated)
+03af0643ad887801d8c1e26de9fdfdf8
+0b9c3c01bd063d3007d085025396a9d6
+1b23ff9b35fc4b2fed91de038a2e8952
+1d00bccceb73be701502457b7a27680a
+2de6a04cdba79ed13580c47dfd70cc5f
+35b44bea9dd6407cee4cc0742676cfb9
+3a017af8a266d76cc14709e0d09c6fcd
+3d5731b505bf365d198432fa5d8acc93
+4275d5671199033189f6f7ac21dda70e
+4c50ac3c4bfb5c77fd6326c1b8eb590c
+5176b91325fa5ba0df28589ab41716a3
+6656ec320108fa1e691ae1f5e18870b7
+749aff6c4ad8e34e22f2ee9b84a368d9
+8a0957bc111dd29e857bade0179160ee
+8bba4233626f64a7ea772bb94a08a1a9
+90cf257c462ce687a64039ac6165d689
+94568214055d10c2bffec4891d7460c4
+965c075bc5371bc99b1af427852cf424
+b2ba6d5a99383d6264afea72c5833664
+bdecfd84723b500b5d6a6c6f0aad58f7
+ca7be81231ba86d42d92495fad1060fc
+d41d8cd98f00b204e9800998ecf8427e
+e0d62f4fe02ee8d8360ce90b2da8722b
+e79ffb98db6ed73daf619fbfab935dc1
+e9d4a97ddfe1377fff758df62348c019
+f9d56db96b75f6091af61dbc47894ef0
+fd8314defc70a8778956f026c0ddfd19
