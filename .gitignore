@@ -1,0 +1,31 @@
+# ==============================================================================
+# BusinessCardScannerVer3 Project Root .gitignore
+# ==============================================================================
+
+# Build Products (Root Level)
+build/
+DerivedData/
+
+# Xcode Files
+*.xcuserstate
+*.xcworkspace
+xcuserdata/
+
+# System Files
+.DS_Store
+
+# iOS Deployment
+*.app
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# Security
+*.mobileprovision
+*.p12
+*.pem
+*.keychain
