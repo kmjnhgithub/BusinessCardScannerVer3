@@ -15,14 +15,14 @@ struct TestFixtures {
         container.resetToDefaults()
         
         // 設定成功場景
-        container.mockBusinessCardRepository.shouldSucceed = true
-        container.mockVisionService.shouldSucceed = true
-        container.mockOpenAIService.shouldSucceed = true
+        container.getMockBusinessCardRepository().shouldSucceed = true
+        container.getMockVisionService().shouldSucceed = true
+        container.getMockOpenAIService().shouldSucceed = true
         
         // 設定合理的延遲
         container.networkDelay = 0.1
-        container.mockVisionService.processingDelay = 0.2
-        container.mockOpenAIService.responseDelay = 0.3
+        container.getMockVisionService().processingDelay = 0.2
+        container.getMockOpenAIService().responseDelay = 0.3
         
         return container
     }
@@ -222,17 +222,17 @@ struct TestFixtures {
         container.resetToDefaults()
         
         // 設定大量資料
-        container.mockBusinessCardRepository.setLargeDataSet(count: cardCount)
+        container.getMockBusinessCardRepository().setLargeDataSet(count: cardCount)
         
         if simulateDelay {
             container.networkDelay = 0.5
-            container.mockVisionService.processingDelay = 1.0
-            container.mockOpenAIService.responseDelay = 2.0
+            container.getMockVisionService().processingDelay = 1.0
+            container.getMockOpenAIService().responseDelay = 2.0
         } else {
             // 快速回應用於效能測試
             container.networkDelay = 0.01
-            container.mockVisionService.processingDelay = 0.01
-            container.mockOpenAIService.responseDelay = 0.01
+            container.getMockVisionService().processingDelay = 0.01
+            container.getMockOpenAIService().responseDelay = 0.01
         }
         
         return container

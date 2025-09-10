@@ -10,18 +10,85 @@
 		821572092E092B21006FA3C2 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 821572082E092B21006FA3C2 /* SnapKit */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		82F3AD282E41DB1A0060C88E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 82CFCDFA2E09031000EAF70D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 82CFCE012E09031000EAF70D;
+			remoteInfo = BusinessCardScannerVer3;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		82CFCE022E09031000EAF70D /* BusinessCardScannerVer3.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BusinessCardScannerVer3.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		82F3AD242E41DB190060C88E /* BusinessCardScannerVer3Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BusinessCardScannerVer3Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		82CFCE142E09031200EAF70D /* Exceptions for "BusinessCardScannerVer3" folder in "BusinessCardScannerVer3" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				BusinessCardScannerVer3Tests/BaseTestCase.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Fixtures/MockData.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Fixtures/TestFixtures.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServiceContainer.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockAICardParser.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardParser.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardRepository.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardRepository.swift.backup,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockExportService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockKeychainService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockOpenAIService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockPermissionManager.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockPhotoService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockValidationService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockVisionService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/ServiceProtocols.swift,
+				BusinessCardScannerVer3Tests/TestSupport/TestCoverageConfig.swift,
+				BusinessCardScannerVer3Tests/UnitTests/Services/KeychainServiceTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/Services/ValidationServiceTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/BaseViewModelTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/BusinessCardServiceTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/CameraViewModelTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/CardListViewModelTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/ContactEditViewModelTests.swift,
 				Core/Models/CoreData/BusinessCardScanner.xcdatamodeld,
 				Info.plist,
 			);
 			target = 82CFCE012E09031000EAF70D /* BusinessCardScannerVer3 */;
+		};
+		82F3AD2F2E41DB610060C88E /* Exceptions for "BusinessCardScannerVer3" folder in "BusinessCardScannerVer3Tests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BusinessCardScannerVer3Tests/BaseTestCase.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Fixtures/MockData.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Fixtures/TestFixtures.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServiceContainer.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockAICardParser.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardParser.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardRepository.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardRepository.swift.backup,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockBusinessCardService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockExportService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockKeychainService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockOpenAIService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockPermissionManager.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockPhotoService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockValidationService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/MockServices/MockVisionService.swift,
+				BusinessCardScannerVer3Tests/TestSupport/Mocks/ServiceProtocols.swift,
+				BusinessCardScannerVer3Tests/TestSupport/TestCoverageConfig.swift,
+				BusinessCardScannerVer3Tests/UnitTests/Services/KeychainServiceTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/Services/ValidationServiceTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/BaseViewModelTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/BusinessCardServiceTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/CameraViewModelTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/CardListViewModelTests.swift,
+				BusinessCardScannerVer3Tests/UnitTests/ViewModels/ContactEditViewModelTests.swift,
+			);
+			target = 82F3AD232E41DB190060C88E /* BusinessCardScannerVer3Tests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -41,8 +108,14 @@
 			exceptions = (
 				82CFCE142E09031200EAF70D /* Exceptions for "BusinessCardScannerVer3" folder in "BusinessCardScannerVer3" target */,
 				821574792E0D29DA006FA3C2 /* Exceptions for "BusinessCardScannerVer3" folder in "Copy Bundle Resources" phase from "BusinessCardScannerVer3" target */,
+				82F3AD2F2E41DB610060C88E /* Exceptions for "BusinessCardScannerVer3" folder in "BusinessCardScannerVer3Tests" target */,
 			);
 			path = BusinessCardScannerVer3;
+			sourceTree = "<group>";
+		};
+		82F3AD252E41DB1A0060C88E /* BusinessCardScannerVer3Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BusinessCardScannerVer3Tests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -56,6 +129,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		82F3AD212E41DB190060C88E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -63,6 +143,7 @@
 			isa = PBXGroup;
 			children = (
 				82CFCE042E09031000EAF70D /* BusinessCardScannerVer3 */,
+				82F3AD252E41DB1A0060C88E /* BusinessCardScannerVer3Tests */,
 				82CFCE032E09031000EAF70D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -71,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				82CFCE022E09031000EAF70D /* BusinessCardScannerVer3.app */,
+				82F3AD242E41DB190060C88E /* BusinessCardScannerVer3Tests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -101,6 +183,29 @@
 			productReference = 82CFCE022E09031000EAF70D /* BusinessCardScannerVer3.app */;
 			productType = "com.apple.product-type.application";
 		};
+		82F3AD232E41DB190060C88E /* BusinessCardScannerVer3Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 82F3AD2A2E41DB1A0060C88E /* Build configuration list for PBXNativeTarget "BusinessCardScannerVer3Tests" */;
+			buildPhases = (
+				82F3AD202E41DB190060C88E /* Sources */,
+				82F3AD212E41DB190060C88E /* Frameworks */,
+				82F3AD222E41DB190060C88E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				82F3AD292E41DB1A0060C88E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				82F3AD252E41DB1A0060C88E /* BusinessCardScannerVer3Tests */,
+			);
+			name = BusinessCardScannerVer3Tests;
+			packageProductDependencies = (
+			);
+			productName = BusinessCardScannerVer3Tests;
+			productReference = 82F3AD242E41DB190060C88E /* BusinessCardScannerVer3Tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -113,6 +218,10 @@
 				TargetAttributes = {
 					82CFCE012E09031000EAF70D = {
 						CreatedOnToolsVersion = 16.4;
+					};
+					82F3AD232E41DB190060C88E = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 82CFCE012E09031000EAF70D;
 					};
 				};
 			};
@@ -134,12 +243,20 @@
 			projectRoot = "";
 			targets = (
 				82CFCE012E09031000EAF70D /* BusinessCardScannerVer3 */,
+				82F3AD232E41DB190060C88E /* BusinessCardScannerVer3Tests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		82CFCE002E09031000EAF70D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		82F3AD222E41DB190060C88E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -156,7 +273,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		82F3AD202E41DB190060C88E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		82F3AD292E41DB1A0060C88E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 82CFCE012E09031000EAF70D /* BusinessCardScannerVer3 */;
+			targetProxy = 82F3AD282E41DB1A0060C88E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		82CFCE162E09031200EAF70D /* Debug */ = {
@@ -334,6 +466,42 @@
 			};
 			name = Release;
 		};
+		82F3AD2B2E41DB1A0060C88E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T895NG5NC4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mike.BusinessCardScannerVer3Tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BusinessCardScannerVer3.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BusinessCardScannerVer3";
+			};
+			name = Debug;
+		};
+		82F3AD2C2E41DB1A0060C88E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T895NG5NC4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mike.BusinessCardScannerVer3Tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BusinessCardScannerVer3.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BusinessCardScannerVer3";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -351,6 +519,15 @@
 			buildConfigurations = (
 				82CFCE162E09031200EAF70D /* Debug */,
 				82CFCE172E09031200EAF70D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		82F3AD2A2E41DB1A0060C88E /* Build configuration list for PBXNativeTarget "BusinessCardScannerVer3Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				82F3AD2B2E41DB1A0060C88E /* Debug */,
+				82F3AD2C2E41DB1A0060C88E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -11,112 +11,106 @@ import Foundation
 
 /// Mock implementation of KeychainService for testing purposes
 /// Simulates Keychain operations using in-memory storage
-class MockKeychainService {
+final class MockKeychainService: KeychainServiceProtocol {
     
     // MARK: - Mock Storage
     
-    private var mockStorage: [String: String] = [:]
-    private var shouldFailOperations = false
-    private var failureKeys: Set<String> = []
+    private var mockStorage: [String: Data] = [:]
     
     // MARK: - Mock Configuration
     
-    /// Configure the mock to simulate failure scenarios
-    /// - Parameter shouldFail: Whether operations should fail
-    func configureShouldFail(_ shouldFail: Bool) {
-        shouldFailOperations = shouldFail
-    }
+    /// 模擬 API Key
+    var mockAPIKey: String? = "sk-test-mock-api-key"
     
-    /// Configure specific keys to fail
-    /// - Parameter keys: Set of keys that should fail operations
-    func configureFailureKeys(_ keys: Set<String>) {
-        failureKeys = keys
-    }
+    /// 是否模擬成功操作
+    var shouldSucceed: Bool = true
     
-    /// Reset mock state to default
-    func resetMockState() {
-        mockStorage.removeAll()
-        shouldFailOperations = false
-        failureKeys.removeAll()
-    }
+    // MARK: - Analytics
     
-    // MARK: - KeychainService Mock Implementation
+    private(set) var saveAPIKeyCallCount: Int = 0
+    private(set) var getAPIKeyCallCount: Int = 0
+    private(set) var deleteAPIKeyCallCount: Int = 0
     
-    func saveString(_ string: String, for key: String) -> Bool {
-        // Simulate failure scenarios
-        if shouldFailOperations || failureKeys.contains(key) {
-            return false
-        }
+    // MARK: - KeychainServiceProtocol Implementation
+    
+    func saveAPIKey(_ apiKey: String) -> Bool {
+        saveAPIKeyCallCount += 1
         
-        // Simulate successful storage
-        mockStorage[key] = string
+        guard shouldSucceed else { return false }
+        
+        mockAPIKey = apiKey
+        if let data = apiKey.data(using: .utf8) {
+            mockStorage["openai_api_key"] = data
+        }
         return true
     }
     
-    func loadString(for key: String) -> String? {
-        // Simulate failure scenarios
-        if shouldFailOperations || failureKeys.contains(key) {
-            return nil
-        }
+    func getAPIKey() -> String? {
+        getAPIKeyCallCount += 1
         
-        // Return stored value
+        guard shouldSucceed else { return nil }
+        
+        return mockAPIKey
+    }
+    
+    func deleteAPIKey() -> Bool {
+        deleteAPIKeyCallCount += 1
+        
+        guard shouldSucceed else { return false }
+        
+        mockAPIKey = nil
+        mockStorage.removeValue(forKey: "openai_api_key")
+        return true
+    }
+    
+    func saveSecureData(_ data: Data, for key: String) -> Bool {
+        guard shouldSucceed else { return false }
+        
+        mockStorage[key] = data
+        return true
+    }
+    
+    func getSecureData(for key: String) -> Data? {
+        guard shouldSucceed else { return nil }
+        
         return mockStorage[key]
     }
     
-    @discardableResult
-    func deleteString(for key: String) -> Bool {
-        // Simulate failure scenarios
-        if shouldFailOperations || failureKeys.contains(key) {
-            return false
-        }
+    func deleteSecureData(for key: String) -> Bool {
+        guard shouldSucceed else { return false }
         
-        // Remove from storage
         mockStorage.removeValue(forKey: key)
         return true
     }
     
-    func clearAll() {
-        if !shouldFailOperations {
-            mockStorage.removeAll()
+    // MARK: - Test Helpers
+    
+    /// 重置 Mock 狀態
+    func resetMockState() {
+        mockStorage.removeAll()
+        mockAPIKey = "sk-test-mock-api-key"
+        shouldSucceed = true
+        
+        saveAPIKeyCallCount = 0
+        getAPIKeyCallCount = 0
+        deleteAPIKeyCallCount = 0
+    }
+    
+    /// 設定無 API Key 場景
+    func setNoAPIKeyScenario() {
+        mockAPIKey = nil
+        mockStorage.removeValue(forKey: "openai_api_key")
+    }
+    
+    /// 預設資料供測試使用
+    func presetData(key: String, value: String) {
+        if let data = value.data(using: .utf8) {
+            mockStorage[key] = data
         }
     }
     
-    // MARK: - Test Utilities
-    
-    /// Get current mock storage for verification
-    /// - Returns: Current storage dictionary
-    func getMockStorage() -> [String: String] {
-        return mockStorage
-    }
-    
-    /// Check if a key exists in mock storage
-    /// - Parameter key: Key to check
-    /// - Returns: Whether the key exists
-    func keyExists(_ key: String) -> Bool {
-        return mockStorage[key] != nil
-    }
-    
-    /// Get the number of stored items
-    /// - Returns: Count of stored items
-    func getStoredItemCount() -> Int {
+    /// 取得目前儲存的資料數量
+    var storedDataCount: Int {
         return mockStorage.count
-    }
-    
-    /// Preset data for testing scenarios
-    /// - Parameters:
-    ///   - key: Storage key
-    ///   - value: Storage value
-    func presetData(key: String, value: String) {
-        mockStorage[key] = value
-    }
-    
-    /// Simulate common API key scenarios
-    func setupCommonTestScenarios() {
-        // Preset OpenAI API key for testing
-        mockStorage["openai_api_key"] = "test-api-key-12345"
-        
-        // Preset other common keys
-        mockStorage["user_preferences"] = "test-preferences"
-        mockStorage["device_id"] = "test-device-id"
     }
 }

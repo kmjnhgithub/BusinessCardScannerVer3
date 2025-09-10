@@ -36,7 +36,7 @@ final class MockVisionService: VisionServiceProtocol {
     var processingDelay: TimeInterval = 0.2
     
     /// 模擬錯誤
-    var mockError: VisionError = .processingFailed
+    var mockError: VisionError = .imageProcessingFailed
     
     // MARK: - Test Scenarios
     
@@ -86,7 +86,7 @@ final class MockVisionService: VisionServiceProtocol {
         
         return Future<OCRResult, Error> { [weak self] promise in
             guard let self = self else {
-                promise(.failure(VisionError.processingFailed))
+                promise(.failure(VisionError.imageProcessingFailed))
                 return
             }
             
@@ -128,7 +128,7 @@ final class MockVisionService: VisionServiceProtocol {
                         if let visionError = error as? VisionError {
                             completion(.failure(visionError))
                         } else {
-                            completion(.failure(.processingFailed))
+                            completion(.failure(.imageProcessingFailed))
                         }
                     }
                 },
@@ -159,7 +159,7 @@ final class MockVisionService: VisionServiceProtocol {
         """
         mockConfidence = 0.85
         processingDelay = 0.2
-        mockError = .processingFailed
+        mockError = .imageProcessingFailed
         
         // 重置分析數據
         recognizeCallCount = 0

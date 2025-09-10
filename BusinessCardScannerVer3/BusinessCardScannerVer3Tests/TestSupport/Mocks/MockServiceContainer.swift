@@ -10,22 +10,52 @@ final class MockServiceContainer {
     
     static let shared = MockServiceContainer()
     
-    // MARK: - Core Mock Services
+    // MARK: - Mock Services (internal)
     
-    private(set) var mockBusinessCardRepository: MockBusinessCardRepository
-    private(set) var mockPhotoService: MockPhotoService
-    private(set) var mockVisionService: MockVisionService
-    private(set) var mockPermissionManager: MockPermissionManager
-    private(set) var mockKeychainService: MockKeychainService
-    private(set) var mockValidationService: MockValidationService
-    private(set) var mockOpenAIService: MockOpenAIService
+    // Internal Mock services for configuration
+    private let mockBusinessCardRepository: MockBusinessCardRepository
+    private let mockPhotoService: MockPhotoService
+    private let mockVisionService: MockVisionService
+    private let mockPermissionManager: MockPermissionManager
+    private let mockKeychainService: MockKeychainService
+    private let mockValidationService: MockValidationService
+    private let mockOpenAIService: MockOpenAIService
+    private let mockBusinessCardParser: MockBusinessCardParser
+    private let mockAICardParser: MockAICardParser
+    private let mockExportService: MockExportService
+    private let mockBusinessCardService: MockBusinessCardService
     
-    // MARK: - Feature Mock Services
+    // MARK: - Service Container Interface (using Mock objects directly)
     
-    private(set) var mockBusinessCardService: MockBusinessCardService
-    private(set) var mockExportService: MockExportService
-    private(set) var mockAICardParser: MockAICardParser
-    private(set) var mockBusinessCardParser: MockBusinessCardParser
+    // 暫時解決方案：直接返回Mock對象
+    // TODO: 長期解決方案是讓所有服務支援協議注入
+    
+    var businessCardRepository: MockBusinessCardRepository { mockBusinessCardRepository }
+    var photoService: MockPhotoService { mockPhotoService }
+    var visionService: MockVisionService { mockVisionService }
+    var businessCardParser: MockBusinessCardParser { mockBusinessCardParser }
+    var aiCardParser: MockAICardParser { mockAICardParser }
+    var permissionManager: MockPermissionManager { mockPermissionManager }
+    var keychainService: MockKeychainService { mockKeychainService }
+    var validationService: MockValidationService { mockValidationService }
+    var openAIService: MockOpenAIService { mockOpenAIService }
+    var businessCardService: MockBusinessCardService { mockBusinessCardService }
+    var exportService: MockExportService { mockExportService }
+    
+    // MARK: - Internal Mock References (for test configuration)
+    
+    /// 直接存取內部Mock物件進行測試配置
+    func getMockBusinessCardRepository() -> MockBusinessCardRepository { mockBusinessCardRepository }
+    func getMockPhotoService() -> MockPhotoService { mockPhotoService }
+    func getMockVisionService() -> MockVisionService { mockVisionService }
+    func getMockPermissionManager() -> MockPermissionManager { mockPermissionManager }
+    func getMockKeychainService() -> MockKeychainService { mockKeychainService }
+    func getMockValidationService() -> MockValidationService { mockValidationService }
+    func getMockOpenAIService() -> MockOpenAIService { mockOpenAIService }
+    func getMockBusinessCardService() -> MockBusinessCardService { mockBusinessCardService }
+    func getMockExportService() -> MockExportService { mockExportService }
+    func getMockAICardParser() -> MockAICardParser { mockAICardParser }
+    func getMockBusinessCardParser() -> MockBusinessCardParser { mockBusinessCardParser }
     
     // MARK: - Configuration Properties
     
@@ -44,7 +74,7 @@ final class MockServiceContainer {
     // MARK: - Initialization
     
     private init() {
-        // 初始化所有 Mock 服務
+        // 初始化所有內部 Mock 服務
         self.mockBusinessCardRepository = MockBusinessCardRepository()
         self.mockPhotoService = MockPhotoService()
         self.mockVisionService = MockVisionService()
@@ -55,11 +85,11 @@ final class MockServiceContainer {
         
         // 特徵服務
         self.mockBusinessCardParser = MockBusinessCardParser()
-        self.mockAICardParser = MockAICardParser()  // 修正：移除不需要的參數
+        self.mockAICardParser = MockAICardParser()
         self.mockExportService = MockExportService()
         
         // 業務服務
-        self.mockBusinessCardService = MockBusinessCardService()  // 修正：移除不需要的參數
+        self.mockBusinessCardService = MockBusinessCardService()
         
         setupMockDefaults()
     }
@@ -68,8 +98,8 @@ final class MockServiceContainer {
     
     private func setupMockDefaults() {
         // 設定預設的 Mock 行為
-        mockPermissionManager.cameraPermissionStatus = .authorized  // 這應該是正確的 AVAuthorizationStatus
-        mockPermissionManager.photoLibraryPermissionStatus = true  // 修正：Bool 類型使用 true
+        mockPermissionManager.cameraPermissionStatus = .authorized
+        mockPermissionManager.photoLibraryPermissionStatus = true
         mockKeychainService.presetData(key: "openai_api_key", value: "sk-test-mock-api-key")
         mockVisionService.shouldSucceed = true
         mockOpenAIService.shouldSucceed = true
@@ -103,14 +133,14 @@ final class MockServiceContainer {
     func simulateOfflineScenario() {
         shouldSimulateNetworkError = true
         mockOpenAIService.shouldSucceed = false
-        mockOpenAIService.mockError = MockServiceError.networkUnavailable  // 修正：使用正確的錯誤類型
+        mockOpenAIService.mockError = MockServiceError.networkUnavailable
     }
     
     /// 設定權限拒絕場景
     func simulatePermissionDeniedScenario() {
         shouldSimulatePermissionDenied = true
-        mockPermissionManager.cameraPermissionStatus = .denied
-        mockPermissionManager.photoLibraryPermissionStatus = false  // 修正：Bool 類型使用 false
+        mockPermissionManager.cameraPermissionStatus = .denied  
+        mockPermissionManager.photoLibraryPermissionStatus = false
     }
     
     /// 設定低品質 OCR 場景
@@ -122,7 +152,7 @@ final class MockServiceContainer {
     /// 設定 API 配額超限場景
     func simulateAPIQuotaExceededScenario() {
         mockOpenAIService.shouldSucceed = false
-        mockOpenAIService.mockError = MockServiceError.quotaExceeded  // 修正：使用正確的錯誤類型
+        mockOpenAIService.mockError = MockServiceError.quotaExceeded
     }
     
     // MARK: - Dependency Injection Helpers

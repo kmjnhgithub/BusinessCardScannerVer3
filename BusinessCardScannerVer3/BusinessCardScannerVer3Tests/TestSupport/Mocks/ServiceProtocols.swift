@@ -34,15 +34,7 @@ protocol PermissionManagerProtocol {
     func checkPhotoLibraryPermission() -> Bool
 }
 
-/// Keychain 服務協議
-protocol KeychainServiceProtocol {
-    func saveAPIKey(_ apiKey: String) -> Bool
-    func getAPIKey() -> String?
-    func deleteAPIKey() -> Bool
-    func saveSecureData(_ data: Data, for key: String) -> Bool
-    func getSecureData(for key: String) -> Data?
-    func deleteSecureData(for key: String) -> Bool
-}
+// Note: KeychainServiceProtocol 現在定義在主專案的 KeychainService.swift 中
 
 /// 資料驗證服務協議
 protocol ValidationServiceProtocol {

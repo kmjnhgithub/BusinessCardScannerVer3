@@ -11,193 +11,88 @@ import Foundation
 
 /// Mock implementation of ValidationService for testing purposes
 /// Allows configurable validation behaviors and edge case simulation
-class MockValidationService {
+final class MockValidationService: ValidationServiceProtocol {
     
     // MARK: - Mock Configuration
     
-    private var emailValidationOverride: Bool?
-    private var phoneValidationOverride: Bool?
-    private var websiteValidationOverride: Bool?
-    private var nameValidationOverride: ValidationResult?
-    private var requiredFieldOverride: ValidationResult?
+    /// 是否模擬嚴格驗證
+    var strictValidation: Bool = false
     
-    private var shouldSimulateDelay = false
-    private var validationDelay: TimeInterval = 0.1
+    // MARK: - Analytics
     
-    // MARK: - Mock Configuration Methods
+    private(set) var emailValidationCount: Int = 0
+    private(set) var phoneValidationCount: Int = 0
+    private(set) var websiteValidationCount: Int = 0
     
-    /// Configure email validation to return specific result
-    /// - Parameter result: Override result for email validation
-    func configureEmailValidation(result: Bool?) {
-        emailValidationOverride = result
-    }
+    // MARK: - ValidationServiceProtocol Implementation
     
-    /// Configure phone validation to return specific result
-    /// - Parameter result: Override result for phone validation
-    func configurePhoneValidation(result: Bool?) {
-        phoneValidationOverride = result
-    }
-    
-    /// Configure website validation to return specific result
-    /// - Parameter result: Override result for website validation
-    func configureWebsiteValidation(result: Bool?) {
-        websiteValidationOverride = result
-    }
-    
-    /// Configure name validation to return specific result
-    /// - Parameter result: Override result for name validation
-    func configureNameValidation(result: ValidationResult?) {
-        nameValidationOverride = result
-    }
-    
-    /// Configure required field validation to return specific result
-    /// - Parameter result: Override result for required field validation
-    func configureRequiredFieldValidation(result: ValidationResult?) {
-        requiredFieldOverride = result
-    }
-    
-    /// Configure validation delay simulation
-    /// - Parameters:
-    ///   - shouldDelay: Whether to simulate delay
-    ///   - delay: Delay duration in seconds
-    func configureValidationDelay(shouldDelay: Bool, delay: TimeInterval = 0.1) {
-        shouldSimulateDelay = shouldDelay
-        validationDelay = delay
-    }
-    
-    /// Reset all mock configurations to default
-    func resetMockState() {
-        emailValidationOverride = nil
-        phoneValidationOverride = nil
-        websiteValidationOverride = nil
-        nameValidationOverride = nil
-        requiredFieldOverride = nil
-        shouldSimulateDelay = false
-        validationDelay = 0.1
-    }
-    
-    // MARK: - Validation Methods (Mirroring ValidationService)
-    
-    /// Validate email format with mock configuration
-    /// - Parameter email: Email to validate
-    /// - Returns: Validation result
     func validateEmail(_ email: String) -> Bool {
-        if shouldSimulateDelay {
-            Thread.sleep(forTimeInterval: validationDelay)
-        }
+        emailValidationCount += 1
         
-        // Return override if configured
-        if let override = emailValidationOverride {
-            return override
+        if strictValidation {
+            // 嚴格驗證
+            let emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+            let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
+            return emailPredicate.evaluate(with: email)
+        } else {
+            // 寬鬆驗證
+            return email.contains("@") && email.contains(".")
         }
-        
-        // Use actual ValidationService logic
-        return ValidationService.shared.validateEmail(email)
     }
     
-    /// Validate phone format with mock configuration
-    /// - Parameter phone: Phone to validate
-    /// - Returns: Validation result
     func validatePhone(_ phone: String) -> Bool {
-        if shouldSimulateDelay {
-            Thread.sleep(forTimeInterval: validationDelay)
-        }
+        phoneValidationCount += 1
         
-        // Return override if configured
-        if let override = phoneValidationOverride {
-            return override
+        if strictValidation {
+            // 嚴格的台灣電話格式驗證
+            let phoneRegex = "^(02|03|04|05|06|07|08|09)[0-9-]{7,}$"
+            let phonePredicate = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
+            return phonePredicate.evaluate(with: phone)
+        } else {
+            // 寬鬆驗證
+            return phone.count >= 8 && phone.rangeOfCharacter(from: CharacterSet.decimalDigits) != nil
         }
-        
-        // Use actual ValidationService logic
-        return ValidationService.shared.validatePhone(phone)
     }
     
-    /// Validate website format with mock configuration
-    /// - Parameter website: Website to validate
-    /// - Returns: Validation result
     func validateWebsite(_ website: String) -> Bool {
-        if shouldSimulateDelay {
-            Thread.sleep(forTimeInterval: validationDelay)
-        }
+        websiteValidationCount += 1
         
-        // Return override if configured
-        if let override = websiteValidationOverride {
-            return override
+        if strictValidation {
+            // 嚴格的網址驗證
+            let urlString = website.hasPrefix("http") ? website : "https://\(website)"
+            guard let url = URL(string: urlString),
+                  let host = url.host, !host.isEmpty else { return false }
+            
+            let hostRegex = "^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$"
+            let hostPredicate = NSPredicate(format: "SELF MATCHES %@", hostRegex)
+            return hostPredicate.evaluate(with: host)
+        } else {
+            // 寬鬆驗證
+            return website.contains(".") && website.count > 3
         }
-        
-        // Use actual ValidationService logic
-        return ValidationService.shared.validateWebsite(website)
     }
     
-    /// Validate required field with mock configuration
-    /// - Parameters:
-    ///   - value: Value to validate
-    ///   - fieldName: Field name for error message
-    /// - Returns: Validation result
-    func validateRequired(_ value: String?, fieldName: String) -> ValidationResult {
-        if shouldSimulateDelay {
-            Thread.sleep(forTimeInterval: validationDelay)
-        }
-        
-        // Return override if configured
-        if let override = requiredFieldOverride {
-            return override
-        }
-        
-        // Use actual ValidationService logic
-        return ValidationService.shared.validateRequired(value, fieldName: fieldName)
+    func validateRequiredField(_ text: String) -> Bool {
+        return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
-    /// Validate name with mock configuration
-    /// - Parameter name: Name to validate
-    /// - Returns: Validation result
-    func validateName(_ name: String?) -> ValidationResult {
-        if shouldSimulateDelay {
-            Thread.sleep(forTimeInterval: validationDelay)
-        }
-        
-        // Return override if configured
-        if let override = nameValidationOverride {
-            return override
-        }
-        
-        // Use actual ValidationService logic
-        return ValidationService.shared.validateName(name)
+    func validateName(_ name: String) -> Bool {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.count >= 1 && trimmedName.count <= 50
     }
     
-    // MARK: - Test Utilities
+    // MARK: - Test Helpers
     
-    /// Setup common test scenarios
-    func setupCommonTestScenarios() {
-        // Reset to default state
-        resetMockState()
+    /// 重置 Mock 狀態
+    func resetMockState() {
+        strictValidation = false
+        emailValidationCount = 0
+        phoneValidationCount = 0
+        websiteValidationCount = 0
     }
     
-    /// Setup edge case scenarios for testing
-    func setupEdgeCaseScenarios() {
-        // Configure to fail all validations
-        configureEmailValidation(result: false)
-        configurePhoneValidation(result: false)
-        configureWebsiteValidation(result: false)
-        configureNameValidation(result: .invalid("Mock validation error"))
-        configureRequiredFieldValidation(result: .invalid("Mock required field error"))
-    }
-    
-    /// Setup performance test scenarios
-    func setupPerformanceTestScenarios() {
-        configureValidationDelay(shouldDelay: true, delay: 0.05)
-    }
-    
-    /// Get validation statistics (for testing purposes)
-    /// - Returns: Dictionary of validation call counts
-    func getValidationStats() -> [String: Int] {
-        // This could be enhanced to track actual call counts if needed
-        return [
-            "email_validations": 0,
-            "phone_validations": 0,
-            "website_validations": 0,
-            "name_validations": 0,
-            "required_validations": 0
-        ]
+    /// 設定嚴格驗證模式
+    func setStrictValidation(_ strict: Bool) {
+        strictValidation = strict
     }
 }
